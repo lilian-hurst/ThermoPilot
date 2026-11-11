@@ -86,17 +86,6 @@ Vit dans la barre des menus et consomme moins de 0,2 % de CPU. Interface **Swift
 - Mesures (MacBook Pro M3 Max) : helper ≈ 0,07 % CPU app fermée, ≈ 0,15 % avec l'app dans la barre des menus
   (contre ≈ 1,35 % avant optimisation), app ≈ 0,2 %. `fanengine bench` détaille le coût de chaque lecture.
 
-## Publier une version (mainteneur)
-1. Mettre à jour le numéro dans `VERSION` (ex. `1.1.0`), committer.
-2. Créer et pousser le tag : `git tag v1.1.0 && git push origin v1.1.0`.
-3. GitHub Actions (`.github/workflows/release.yml`) compile sur un Mac Apple Silicon, crée le DMG + ZIP + SHA256SUMS
-   et publie la release. En local : `scripts/release.sh` (fichiers dans `dist/`).
-4. Optionnel — supprimer l'avertissement Gatekeeper : compte Apple Developer (99 $/an), certificat « Developer ID Application »,
-   puis secrets GitHub `MACOS_CERT_P12` (base64), `MACOS_CERT_PASSWORD`, `APPLE_ID`, `APPLE_TEAM_ID`, `APPLE_APP_PASSWORD`.
-   Le workflow signe et notarise alors automatiquement.
-
-L'icône se régénère avec `scripts/make-icon.sh`.
-
 ## Compiler et lancer
 ```bash
 ./build.sh
