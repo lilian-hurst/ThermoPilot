@@ -1,0 +1,20 @@
+[package]
+name = "fanengine"
+version = "0.1.0"
+edition = "2021"
+description = "Moteur Rust de monitoring thermique et de contrôle des ventilateurs pour Mac Apple Silicon"
+
+[[bin]]
+name = "fanengine"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+libc = "0.2"
+core-foundation = "0.10"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
