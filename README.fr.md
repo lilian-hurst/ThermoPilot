@@ -1,119 +1,101 @@
-<p align="center"><img src="assets/icon-1024.png" width="160" alt="Icône ThermoPilot"></p>
+<p align="center">
+  <img src="assets/icon-1024.png" width="140" alt="Icône ThermoPilot">
+</p>
 
-<p align="center"><a href="README.md">English</a> · <b>Français</b></p>
+<h1 align="center">ThermoPilot</h1>
 
-# ThermoPilot — températures, ventilateurs et batterie pour Mac Apple Silicon
+<p align="center">
+  <b>Températures, ventilateurs et santé de la batterie pour Mac Apple Silicon, directement dans la barre des menus.</b><br>
+  Gratuit, open source, et plus léger que les problèmes qu'il surveille (&lt; 0,2 % de CPU).
+</p>
 
-Surveille les températures CPU/GPU, pilote les ventilateurs, conseille quand les accélérer,
-et maximise l'autonomie et la durée de vie de la batterie (limiteur de charge, diagnostic de décharge, apps gourmandes).
-Vit dans la barre des menus et consomme moins de 0,2 % de CPU. Interface **SwiftUI** + moteur **Rust**.
+<p align="center">
+  <a href="../../releases/latest"><img alt="Dernière version" src="https://img.shields.io/github/v/release/lilian-hurst/ThermoPilot?label=t%C3%A9l%C3%A9charger&color=1d6fb8"></a>
+  <img alt="macOS 15+" src="https://img.shields.io/badge/macOS-15%2B-0f172a?logo=apple">
+  <a href="LICENSE"><img alt="Licence MIT" src="https://img.shields.io/badge/licence-MIT-34d399"></a>
+  <a href="CONTRIBUTING.md"><img alt="Contributions bienvenues" src="https://img.shields.io/badge/contributions-bienvenues-facc15"></a>
+</p>
 
-🌐 **Interface en français et en anglais** — suit la langue de macOS par défaut ; changez-la à tout moment via le menu globe (🌐) en haut du tableau de bord ou dans la barre des menus.
+<p align="center">
+  <a href="../../releases/latest"><b>⬇️ Télécharger</b></a> ·
+  <a href="README.md">English</a>
+</p>
 
-## Télécharger
+<p align="center">
+  <a href="assets/demo.mp4"><img src="assets/demo.gif" width="880" alt="Démo de ThermoPilot"></a><br>
+  <sub>▶️ <a href="assets/demo.mp4">Voir la démo de 30 secondes avec le son</a></sub>
+</p>
 
-➡️ **[Dernière version (DMG)](../../releases/latest)** — ouvrez le DMG et glissez ThermoPilot dans Applications.
+---
 
-**Configuration requise** : Mac Apple Silicon (testé sur MacBook Pro M3 Max), macOS 15 Sequoia ou plus récent.
+## Pourquoi ThermoPilot ?
 
-**Premier lancement** : si l'app n'est pas notarisée par Apple, macOS affiche « ThermoPilot ne peut pas être ouvert ».
-- Réglages Système › Confidentialité et sécurité › tout en bas : **Ouvrir quand même**, ou
-- dans le Terminal :
-  ```bash
-  xattr -dr com.apple.quarantine /Applications/ThermoPilot.app
-  ```
+Mon MacBook Pro M3 Max chauffe sous charge, et certains jours la batterie se vidait bien plus vite que d'autres, sans que je sache pourquoi.
+Les outils existants couvrent chacun un morceau : ventilateurs, températures ou limite de charge. **ThermoPilot fait les trois, et explique ce qui se passe.**
 
-**Piloter les ventilateurs et la charge** : menu de la pastille en haut du tableau de bord › **Installer le helper root…**
-(mot de passe administrateur, une seule fois). Sans helper, l'app fonctionne en lecture seule.
+- 🌡️ **Voir** tous les capteurs de température de la puce, en direct.
+- 🌀 **Piloter** les ventilateurs : laisser macOS décider, fixer une vitesse ou choisir une courbe.
+- 🔋 **Protéger** la batterie : limiter la charge à 80 %, avec une protection thermique.
+- 📉 **Comprendre** la décharge : est-elle normale ? Quelles apps vident la batterie, et qu'est-ce qui réveille le Mac la nuit ?
 
-**Désinstaller** : pastille › « Désinstaller le helper », puis mettre l'app à la corbeille.
+Une app SwiftUI native avec un moteur en Rust, dans la barre des menus, **gratuite et open source** (MIT).
+**L'objectif est de la faire évoluer ensemble : idées, retours et contributions sont les bienvenus.**
 
-> ⚠️ Piloter les ventilateurs et la charge écrit dans le SMC du Mac. ThermoPilot rend toujours la main à macOS
-> (app quittée, veille, arrêt du helper) et force les ventilateurs au maximum au-delà de 100 °C, mais utilisez-le à vos risques.
+## ✨ Fonctions
 
-```
-┌──────────────────────┐   JSON-lines / socket Unix   ┌───────────────────────────┐
-│ ThermoPilot.app      │ ───────────────────────────▶ │ fanengine (Rust)          │
-│ SwiftUI + Charts     │   status / set_mode          │ IOKit → AppleSMC          │
-│ fenêtre + barre menus│ ◀─────────────────────────── │ capteurs, courbes, conseil│
-└──────────────────────┘                              └───────────────────────────┘
-```
+- **Tableau de bord thermique** : cœurs performance et efficacité, GPU, SoC, SSD, batterie, Wi-Fi, repose-poignets, flux d'air, toutes les clés SMC brutes, et un historique sur 1, 5 ou 10 min. Un conseiller indique quand accélérer les ventilateurs.
+- **Ventilateurs** : Auto (macOS), Manuel (0–100 %) ou Courbe (Silencieux / Équilibré / Performance). Ils sont rendus à macOS 5 s après la fermeture de l'app, avant la veille ou à l'arrêt du helper, et forcés au maximum au-delà de 100 °C.
+- **Batterie** : limiteur de charge (50–100 %) avec protection thermique ; santé calculée comme macOS, cycles, température, puissance ; réglages d'alimentation en un clic, avec sauvegarde et restauration.
+- **« Ma décharge est-elle normale ? »** : décharge en utilisation, au repos et en veille, comparée à des repères ; historique sur 7 jours ; apps qui vident la batterie ; apps qui empêchent la veille ; causes des réveils ; corrections en un clic.
+- Interface en **français et en anglais**, qui suit la langue de macOS.
 
-## Fonctions
-- Températures CPU (cœurs P / E), GPU, SoC, SSD, batterie, Wi-Fi, repose-poignets, flux d'air (+ toutes les clés SMC brutes)
-- Vitesse des 2 ventilateurs (RPM, min/max, consigne, mode), charge CPU (par cœur), charge GPU, puissance système
-- Historique 1 / 5 / 10 min
-- Contrôle : **Auto (macOS)**, **Manuel** (0–100 %), **Courbe** (Silencieux / Équilibré / Performance)
-- **Conseiller** : niveau (frais → critique), tendance °C/min, ventilation conseillée, bouton « Appliquer », notifications
-- **App quittée = macOS reprend la main** : dès qu'aucune instance de ThermoPilot n'est connectée au helper depuis 5 s
-  (app quittée ou plantée), les ventilateurs repassent en Auto (macOS). Fermer seulement la fenêtre ne compte pas : l'app reste dans la barre des menus.
-- **Sécurité** : en mode Manuel/Courbe, si le point chaud dépasse 100 °C les ventilateurs passent au max (jusqu'à < 92 °C) ; à l'arrêt du helper le contrôle est rendu à macOS
+## 📦 Installation
 
-## Batterie : autonomie & durée de vie (onglet « Batterie »)
-- **Mesures** : charge, santé (capacité réelle / d'origine), cycles, température, puissance entrante/sortante, autonomie estimée, adaptateur
-- **Limiteur de charge** (helper root) : limite 50–100 %, protection thermique (pause > 35 °C), redescente à la limite.
-  Le moteur détecte les clés SMC du firmware (`CHTE` / `CH0B`+`CH0C` pour la pause de charge, `CHIE` / `CH0I` pour couper l'adaptateur)
-  et **vérifie l'effet réel** (courant batterie). Sur ce MacBook Pro M3 Max, seule `CHIE` existe : mode « navigation »
-  (adaptateur coupé à la limite, réactivé 5 points plus bas, et toujours réactivé avant la veille et à l'arrêt du helper).
-- **Réglages macOS (pmset)** par profil batterie / secteur : mode d'énergie, extinction écran, veille, Power Nap,
-  bouton « Optimiser l'autonomie » (réglages précédents sauvegardés, bouton « Restaurer »)
-- **Plus gros consommateurs** : énergie réelle par processus (`ri_energy_nj`), bouton « Quitter » pour les apps
-- **Conseils** générés par le moteur Rust, avec action en un clic (limiter à 80 %, passer en Automatique, éteindre l'écran,
-  couper Power Nap, ventilateurs en Auto sur batterie, quitter une app gourmande…). Détecte aussi les autres gestionnaires de charge
-  (script `battery`, AlDente) pour éviter les conflits.
+1. **[Téléchargez le DMG](../../releases/latest)**, ouvrez-le et glissez **ThermoPilot** dans **Applications**.
+2. **Premier lancement** : l'app n'est pas encore notarisée par Apple, donc macOS la bloque la première fois.
+   - **Réglages Système › Confidentialité et sécurité** : tout en bas, cliquez sur **Ouvrir quand même**, ou
+   - dans le Terminal :
+     ```bash
+     xattr -dr com.apple.quarantine /Applications/ThermoPilot.app
+     ```
+3. *(Facultatif)* Pour **piloter les ventilateurs et la charge** : pastille en haut à droite du tableau de bord › **Installer le helper root…** (mot de passe administrateur, une seule fois).
 
-### Utilisation & diagnostic (Batterie › « Utilisation & diagnostic »)
-- **Est-ce normal ?** Trois mesures comparées à des repères MacBook Pro Apple Silicon, plus un verdict global :
-  décharge en utilisation (%/h, normal ≤ 8 en usage léger et ≤ 15 en usage soutenu, pondérée par la charge CPU),
-  consommation au repos écran allumé (W, normal ≤ 7 W) et vidange en veille (%/h, normal ≤ 0,5 soit ≈ 4 % par nuit).
-- **Comment la batterie a été utilisée** : courbe de charge sur 24 h / 7 jours (plages branché / en veille),
-  un tableau par jour (temps éveillé et en veille sur batterie, % consommés, rythme coloré, temps branché, réveils),
-  la liste des sessions sur batterie et les veilles avec leur nombre de réveils et leur cause principale.
-- **Apps qui vident la batterie** : énergie (Wh, part en %, W moyens, minutes CPU) cumulée *uniquement pendant la décharge*,
-  sur 24 h et 7 jours, plus la part « écran, Wi-Fi et reste du système » (mesure batterie moins somme des apps).
-- **Que faire ?** Recommandations ciblées : conseil spécifique selon l'app (navigateur, Electron, Spotlight, Docker/VM,
-  modèles IA, WindowServer…) avec un bouton « Quitter », apps qui empêchent la veille (`pmset -g assertions`),
-  et pour une veille gourmande : couper TCP keep-alive ou Power Nap sur batterie, appareils Bluetooth qui réveillent le Mac.
-- **Sources** : le journal d'alimentation macOS (`pmset -g log`, ~7 jours, lisible sans root, donc l'historique existe dès l'installation)
-  et l'enregistreur du moteur (1 point/min, énergie par app). Avec le helper root, l'enregistrement continue même app fermée.
-  Les données sont dans `/Library/Application Support/ThermoPilot/usage.json` (7 jours glissants).
+**Configuration requise** : Mac Apple Silicon (M1 à M4), macOS 15 Sequoia ou plus récent.
+**Désinstaller** : pastille › **Désinstaller le helper root…**, puis mettez l'app à la corbeille.
 
-## Sobriété (consommation de ThermoPilot lui-même)
-- **Cadence adaptative du moteur** : 1 s quand une fenêtre est visible ou quand ThermoPilot pilote les ventilateurs,
-  5 s quand l'app est seulement dans la barre des menus, 10 s quand elle est fermée.
-- **Lectures au strict nécessaire** : app fermée, seuls les capteurs batterie sont lus (le SMC coûte ~0,2 ms par clé, 168 clés) ;
-  app en arrière-plan, 1 capteur sur 4 dans les gros groupes ; bornes des ventilateurs lues une seule fois.
-- **Aucun processus lancé en routine** : détection des conflits (AlDente, script `battery`) par lecture native de la table des processus,
-  `pmset -g custom` toutes les 2 min seulement si l'app est ouverte, journal `pmset -g log` et assertions uniquement
-  quand la page « Utilisation » est affichée.
-- **App** : interroge le moteur toutes les 5 s en arrière-plan (1 s fenêtre visible), réveils regroupés, pas de rendu SwiftUI hors écran.
-- Mesures (MacBook Pro M3 Max) : helper ≈ 0,07 % CPU app fermée, ≈ 0,15 % avec l'app dans la barre des menus
-  (contre ≈ 1,35 % avant optimisation), app ≈ 0,2 %. `fanengine bench` détaille le coût de chaque lecture.
+## 🔒 Sécurité
 
-## Compiler et lancer
+Le helper root n'accepte que votre compte utilisateur et root. Les ventilateurs reviennent toujours à macOS, et l'adaptateur secteur est toujours réactivé avant la veille et à l'arrêt du helper. Seule une courte liste de réglages `pmset` peut être modifiée. Tout le code est ouvert : voir [`engine/src`](engine/src).
+L'app est fournie telle quelle, sans garantie.
+
+## 🤝 Contribuer
+
+**ThermoPilot a vocation à évoluer avec sa communauté.** Toute aide compte, même sans coder :
+
+- 🧪 **Testez-le sur votre Mac** : il n'a été testé que sur un MacBook Pro M3 Max. → [Ouvrir un rapport matériel](../../issues/new?template=hardware_report.yml)
+- 🐛 Signalez des **bugs**, 💡 proposez des **idées** dans les [Issues](../../issues).
+- 🌍 **Traduisez** l'app dans votre langue.
+- 🛠️ Envoyez une **pull request** : voir **[CONTRIBUTING.md](CONTRIBUTING.md)**.
+
+## 🗺️ Feuille de route
+
+- [ ] Support vérifié des puces **M1 / M2 / M4**
+- [ ] **Limiteur de charge** sur les puces qui ont une clé de pause de charge
+- [ ] **Notarisation Apple** et **Homebrew**
+- [ ] **Lancement au démarrage** et mises à jour automatiques
+- [ ] Plus de **langues**, **widgets**, export CSV de l'historique
+
+## 🏗️ Compiler depuis les sources
+
+Il faut Rust (stable) et Xcode 16+ / Swift 6.
+
 ```bash
+git clone https://github.com/lilian-hurst/ThermoPilot.git
+cd ThermoPilot
 ./build.sh
 open build/ThermoPilot.app
-```
-ThermoPilot vit dans la **barre des menus** (température du point chaud) : pas d'icône dans le Dock ni de fenêtre au lancement.
-Le tableau de bord s'ouvre via le bouton « Tableau de bord » du menu, ou en relançant l'app (Spotlight, Finder) ;
-l'icône du Dock n'apparaît que tant que la fenêtre est ouverte. « Quitter » est dans le menu.
-
-Sans helper, l'app lance le moteur en **lecture seule** (lire le SMC ne nécessite pas root).
-Pour piloter les ventilateurs : bouton **Lecture seule ▾ → Installer le helper root…** (mot de passe admin, une seule fois).
-Le helper (`/Library/PrivilegedHelperTools/com.lilian.fanengine`, LaunchDaemon) n'accepte que ton UID et root.
-**Après une modification du moteur Rust, refais « Réinstaller le helper root… ».**
-
-## CLI du moteur
-```bash
-engine/target/release/fanengine status     # instantané JSON
-engine/target/release/fanengine dump       # toutes les clés SMC
-engine/target/release/fanengine battery    # batterie, limiteur, pmset, consommateurs, conseils (JSON)
-engine/target/release/fanengine usage      # rapport d'utilisation et diagnostic de décharge (JSON)
-engine/target/release/fanengine bench      # coût (temps mur / CPU) de chaque lecture du moteur
-sudo engine/target/release/fanengine auto  # secours : rendre les ventilateurs à macOS
 ```
 
 ## Licence
 
-MIT — voir [LICENSE](LICENSE).
+[MIT](LICENSE) © lilian-hurst

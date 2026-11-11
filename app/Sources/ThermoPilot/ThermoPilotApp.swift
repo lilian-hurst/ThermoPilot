@@ -12,6 +12,7 @@ struct ThermoPilotApp: App {
                 BatteryView().tabItem { Label(tr("Batterie", "Battery"), systemImage: "battery.75percent") }
             }
                 .id(client.languageChoice) // redessine tout au changement de langue
+                .environment(\.locale, Locale(identifier: Lang.english ? "en_US" : "fr_FR")) // dates des graphiques
                 .environment(client)
                 .frame(minWidth: 900, minHeight: 700)
                 .onAppear {

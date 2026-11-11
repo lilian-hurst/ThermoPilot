@@ -1,0 +1,34 @@
+name: 🐛 Bug report
+description: Something doesn't work as expected
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead? Screenshots welcome.
+    validations:
+      required: true
+  - type: input
+    id: model
+    attributes:
+      label: Mac model, chip and macOS version
+      placeholder: "MacBook Pro 14\" M3 Pro, macOS 15.5"
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: ThermoPilot version
+      placeholder: "1.1.0"
+  - type: dropdown
+    id: helper
+    attributes:
+      label: Is the root helper installed?
+      options: ["Yes", "No", "Not sure"]
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs (optional)
+      description: "Output of `fanengine status`, or the end of `/var/log/fanengine.log`."
+      render: text
