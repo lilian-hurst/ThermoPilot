@@ -1,115 +1,125 @@
-<p align="center"><img src="assets/icon-1024.png" width="160" alt="Icône ThermoPilot"></p>
+<p align="center"><img src="assets/icon-1024.png" width="160" alt="ThermoPilot icon"></p>
 
-# ThermoPilot — températures, ventilateurs et batterie pour Mac Apple Silicon
+<p align="center"><b>English</b> · <a href="README.fr.md">Français</a></p>
 
-Surveille les températures CPU/GPU, pilote les ventilateurs, conseille quand les accélérer,
-et maximise l'autonomie et la durée de vie de la batterie (limiteur de charge, diagnostic de décharge, apps gourmandes).
-Vit dans la barre des menus et consomme moins de 0,2 % de CPU. Interface **SwiftUI** + moteur **Rust**.
+# ThermoPilot — temperatures, fans and battery for Apple Silicon Macs
 
-## Télécharger
+Monitors CPU/GPU temperatures, controls the fans, tells you when to spin them up,
+and maximizes both battery runtime and battery lifespan (charge limiter, drain diagnostics, energy-hungry apps).
+Lives in the menu bar and uses less than 0.2 % CPU. **SwiftUI** interface + **Rust** engine.
 
-➡️ **[Dernière version (DMG)](../../releases/latest)** — ouvrez le DMG et glissez ThermoPilot dans Applications.
+> 🇫🇷 The app's interface is currently in French. An English localization is planned — contributions welcome.
 
-**Configuration requise** : Mac Apple Silicon (testé sur MacBook Pro M3 Max), macOS 15 Sequoia ou plus récent.
+## Download
 
-**Premier lancement** : si l'app n'est pas notarisée par Apple, macOS affiche « ThermoPilot ne peut pas être ouvert ».
-- Réglages Système › Confidentialité et sécurité › tout en bas : **Ouvrir quand même**, ou
-- dans le Terminal :
+➡️ **[Latest release (DMG)](../../releases/latest)** — open the DMG and drag ThermoPilot into Applications.
+
+**Requirements**: Apple Silicon Mac (tested on a MacBook Pro M3 Max), macOS 15 Sequoia or later.
+
+**First launch**: the app is not notarized by Apple yet, so macOS says "ThermoPilot cannot be opened".
+- System Settings › Privacy & Security › at the bottom: **Open Anyway**, or
+- in Terminal:
   ```bash
   xattr -dr com.apple.quarantine /Applications/ThermoPilot.app
   ```
 
-**Piloter les ventilateurs et la charge** : menu de la pastille en haut du tableau de bord › **Installer le helper root…**
-(mot de passe administrateur, une seule fois). Sans helper, l'app fonctionne en lecture seule.
+**Controlling fans and charging**: status pill at the top right of the dashboard › **Installer le helper root…** (Install root helper)
+— administrator password, once. Without the helper, the app runs read-only.
 
-**Désinstaller** : pastille › « Désinstaller le helper », puis mettre l'app à la corbeille.
+**Uninstall**: status pill › **Désinstaller le helper** (Uninstall helper), then move the app to the Trash.
 
-> ⚠️ Piloter les ventilateurs et la charge écrit dans le SMC du Mac. ThermoPilot rend toujours la main à macOS
-> (app quittée, veille, arrêt du helper) et force les ventilateurs au maximum au-delà de 100 °C, mais utilisez-le à vos risques.
+> ⚠️ Controlling fans and charging writes to the Mac's SMC. ThermoPilot always hands control back to macOS
+> (app quit, sleep, helper stopped) and forces the fans to maximum above 100 °C, but use it at your own risk.
 
 ```
-┌──────────────────────┐   JSON-lines / socket Unix   ┌───────────────────────────┐
+┌──────────────────────┐   JSON lines / Unix socket   ┌───────────────────────────┐
 │ ThermoPilot.app      │ ───────────────────────────▶ │ fanengine (Rust)          │
 │ SwiftUI + Charts     │   status / set_mode          │ IOKit → AppleSMC          │
-│ fenêtre + barre menus│ ◀─────────────────────────── │ capteurs, courbes, conseil│
+│ window + menu bar    │ ◀─────────────────────────── │ sensors, curves, advice   │
 └──────────────────────┘                              └───────────────────────────┘
 ```
 
-## Fonctions
-- Températures CPU (cœurs P / E), GPU, SoC, SSD, batterie, Wi-Fi, repose-poignets, flux d'air (+ toutes les clés SMC brutes)
-- Vitesse des 2 ventilateurs (RPM, min/max, consigne, mode), charge CPU (par cœur), charge GPU, puissance système
-- Historique 1 / 5 / 10 min
-- Contrôle : **Auto (macOS)**, **Manuel** (0–100 %), **Courbe** (Silencieux / Équilibré / Performance)
-- **Conseiller** : niveau (frais → critique), tendance °C/min, ventilation conseillée, bouton « Appliquer », notifications
-- **App quittée = macOS reprend la main** : dès qu'aucune instance de ThermoPilot n'est connectée au helper depuis 5 s
-  (app quittée ou plantée), les ventilateurs repassent en Auto (macOS). Fermer seulement la fenêtre ne compte pas : l'app reste dans la barre des menus.
-- **Sécurité** : en mode Manuel/Courbe, si le point chaud dépasse 100 °C les ventilateurs passent au max (jusqu'à < 92 °C) ; à l'arrêt du helper le contrôle est rendu à macOS
+## Features
+- Temperatures: CPU (P / E cores), GPU, SoC, SSD, battery, Wi-Fi, palm rest, airflow (+ every raw SMC key)
+- Speed of both fans (RPM, min/max, target, mode), CPU load (per core), GPU load, system power
+- 1 / 5 / 10 min history charts
+- Control modes: **Auto (macOS)**, **Manual** (0–100 %), **Curve** (Silent / Balanced / Performance)
+- **Advisor**: level (cool → critical), °C/min trend, recommended fan speed, "Apply" button, notifications
+- **Quitting the app gives control back to macOS**: as soon as no ThermoPilot instance has been connected to the helper
+  for 5 s (app quit or crashed), the fans go back to Auto (macOS). Closing only the window doesn't count: the app stays in the menu bar.
+- **Safety**: in Manual/Curve mode, if the hotspot exceeds 100 °C the fans go to max (until < 92 °C); when the helper stops, control returns to macOS
 
-## Batterie : autonomie & durée de vie (onglet « Batterie »)
-- **Mesures** : charge, santé (capacité réelle / d'origine), cycles, température, puissance entrante/sortante, autonomie estimée, adaptateur
-- **Limiteur de charge** (helper root) : limite 50–100 %, protection thermique (pause > 35 °C), redescente à la limite.
-  Le moteur détecte les clés SMC du firmware (`CHTE` / `CH0B`+`CH0C` pour la pause de charge, `CHIE` / `CH0I` pour couper l'adaptateur)
-  et **vérifie l'effet réel** (courant batterie). Sur ce MacBook Pro M3 Max, seule `CHIE` existe : mode « navigation »
-  (adaptateur coupé à la limite, réactivé 5 points plus bas, et toujours réactivé avant la veille et à l'arrêt du helper).
-- **Réglages macOS (pmset)** par profil batterie / secteur : mode d'énergie, extinction écran, veille, Power Nap,
-  bouton « Optimiser l'autonomie » (réglages précédents sauvegardés, bouton « Restaurer »)
-- **Plus gros consommateurs** : énergie réelle par processus (`ri_energy_nj`), bouton « Quitter » pour les apps
-- **Conseils** générés par le moteur Rust, avec action en un clic (limiter à 80 %, passer en Automatique, éteindre l'écran,
-  couper Power Nap, ventilateurs en Auto sur batterie, quitter une app gourmande…). Détecte aussi les autres gestionnaires de charge
-  (script `battery`, AlDente) pour éviter les conflits.
+## Battery: runtime & lifespan ("Battery" tab)
+- **Readings**: charge, health (current vs. design capacity, same formula as macOS), cycles, temperature,
+  power in/out, estimated time remaining, power adapter
+- **Charge limiter** (root helper): 50–100 % limit, heat protection (pause above 35 °C), discharge down to the limit.
+  The engine detects the firmware's SMC keys (`CHTE` / `CH0B`+`CH0C` to pause charging, `CHIE` / `CH0I` to cut the adapter)
+  and **verifies the actual effect** (battery current). On the M3 Max MacBook Pro only `CHIE` exists: "sailing" mode
+  (adapter cut at the limit, re-enabled 5 points lower, and always re-enabled before sleep and when the helper stops).
+- **macOS power settings (pmset)** per battery / AC profile: energy mode, display sleep, system sleep, Power Nap,
+  "Optimize battery life" button (previous settings are saved, "Restore" button)
+- **Top consumers**: real per-process energy (`ri_energy_nj`), "Quit" button for apps
+- **Tips** generated by the Rust engine, with one-click actions (limit to 80 %, switch to Automatic, turn off the display,
+  disable Power Nap, fans back to Auto on battery, quit a hungry app…). Also detects other charge managers
+  (`battery` script, AlDente) to avoid conflicts.
 
-### Utilisation & diagnostic (Batterie › « Utilisation & diagnostic »)
-- **Est-ce normal ?** Trois mesures comparées à des repères MacBook Pro Apple Silicon, plus un verdict global :
-  décharge en utilisation (%/h, normal ≤ 8 en usage léger et ≤ 15 en usage soutenu, pondérée par la charge CPU),
-  consommation au repos écran allumé (W, normal ≤ 7 W) et vidange en veille (%/h, normal ≤ 0,5 soit ≈ 4 % par nuit).
-- **Comment la batterie a été utilisée** : courbe de charge sur 24 h / 7 jours (plages branché / en veille),
-  un tableau par jour (temps éveillé et en veille sur batterie, % consommés, rythme coloré, temps branché, réveils),
-  la liste des sessions sur batterie et les veilles avec leur nombre de réveils et leur cause principale.
-- **Apps qui vident la batterie** : énergie (Wh, part en %, W moyens, minutes CPU) cumulée *uniquement pendant la décharge*,
-  sur 24 h et 7 jours, plus la part « écran, Wi-Fi et reste du système » (mesure batterie moins somme des apps).
-- **Que faire ?** Recommandations ciblées : conseil spécifique selon l'app (navigateur, Electron, Spotlight, Docker/VM,
-  modèles IA, WindowServer…) avec un bouton « Quitter », apps qui empêchent la veille (`pmset -g assertions`),
-  et pour une veille gourmande : couper TCP keep-alive ou Power Nap sur batterie, appareils Bluetooth qui réveillent le Mac.
-- **Sources** : le journal d'alimentation macOS (`pmset -g log`, ~7 jours, lisible sans root, donc l'historique existe dès l'installation)
-  et l'enregistreur du moteur (1 point/min, énergie par app). Avec le helper root, l'enregistrement continue même app fermée.
-  Les données sont dans `/Library/Application Support/ThermoPilot/usage.json` (7 jours glissants).
+### Usage & diagnostics (Battery › "Usage & diagnostics")
+- **Is my drain normal?** Three measurements compared with Apple Silicon MacBook Pro baselines, plus an overall verdict:
+  drain while in use (%/h, normal ≤ 8 for light use and ≤ 15 for sustained use, weighted by CPU load),
+  idle power with the display on (W, normal ≤ 7 W) and drain during sleep (%/h, normal ≤ 0.5, i.e. ≈ 4 % per night).
+- **How the battery was used**: charge level over 24 h / 7 days (plugged-in / asleep periods),
+  a per-day table (time awake and asleep on battery, % used, color-coded rate, time plugged in, wake-ups),
+  the list of battery sessions, and sleep periods with their wake-up count and main cause.
+- **Apps draining the battery**: energy (Wh, share in %, average W, CPU minutes) counted *only while discharging*,
+  over 24 h and 7 days, plus the "display, Wi-Fi and rest of the system" share (battery measurement minus the sum of apps).
+- **What to do?** Targeted recommendations: app-specific advice (browsers, Electron apps, Spotlight, Docker/VMs,
+  AI models, WindowServer…) with a "Quit" button, apps preventing sleep (`pmset -g assertions`),
+  and for a hungry sleep: disable TCP keep-alive or Power Nap on battery, Bluetooth devices waking the Mac.
+- **Sources**: the macOS power log (`pmset -g log`, ~7 days, readable without root, so history is available right after install)
+  and the engine's recorder (1 point/min, per-app energy). With the root helper, recording continues even when the app is closed.
+  Data lives in `/Library/Application Support/ThermoPilot/usage.json` (rolling 7 days).
 
-## Sobriété (consommation de ThermoPilot lui-même)
-- **Cadence adaptative du moteur** : 1 s quand une fenêtre est visible ou quand ThermoPilot pilote les ventilateurs,
-  5 s quand l'app est seulement dans la barre des menus, 10 s quand elle est fermée.
-- **Lectures au strict nécessaire** : app fermée, seuls les capteurs batterie sont lus (le SMC coûte ~0,2 ms par clé, 168 clés) ;
-  app en arrière-plan, 1 capteur sur 4 dans les gros groupes ; bornes des ventilateurs lues une seule fois.
-- **Aucun processus lancé en routine** : détection des conflits (AlDente, script `battery`) par lecture native de la table des processus,
-  `pmset -g custom` toutes les 2 min seulement si l'app est ouverte, journal `pmset -g log` et assertions uniquement
-  quand la page « Utilisation » est affichée.
-- **App** : interroge le moteur toutes les 5 s en arrière-plan (1 s fenêtre visible), réveils regroupés, pas de rendu SwiftUI hors écran.
-- Mesures (MacBook Pro M3 Max) : helper ≈ 0,07 % CPU app fermée, ≈ 0,15 % avec l'app dans la barre des menus
-  (contre ≈ 1,35 % avant optimisation), app ≈ 0,2 %. `fanengine bench` détaille le coût de chaque lecture.
+## Efficiency (ThermoPilot's own footprint)
+- **Adaptive engine cadence**: 1 s when a window is visible or when ThermoPilot is driving the fans,
+  5 s when the app is only in the menu bar, 10 s when it is closed.
+- **Only reads what is needed**: app closed, only battery sensors are read (the SMC costs ~0.2 ms per key, 168 keys);
+  app in the background, 1 sensor out of 4 in the large groups; fan limits read only once.
+- **No processes spawned routinely**: conflict detection (AlDente, `battery` script) reads the process table natively,
+  `pmset -g custom` every 2 min only while the app is open, `pmset -g log` and assertions only
+  while the "Usage" page is displayed.
+- **App**: polls the engine every 5 s in the background (1 s with a visible window), coalesced wake-ups, no off-screen SwiftUI rendering.
+- Measured on a MacBook Pro M3 Max: helper ≈ 0.07 % CPU with the app closed, ≈ 0.18 % with the app in the menu bar
+  (vs. ≈ 1.35 % before optimization), app ≈ 0.1 %. `fanengine bench` shows the cost of every read.
 
-## Compiler et lancer
+## Build and run
+Requires Rust (stable) and Xcode 16+ / Swift 6.
 ```bash
 ./build.sh
 open build/ThermoPilot.app
 ```
-ThermoPilot vit dans la **barre des menus** (température du point chaud) : pas d'icône dans le Dock ni de fenêtre au lancement.
-Le tableau de bord s'ouvre via le bouton « Tableau de bord » du menu, ou en relançant l'app (Spotlight, Finder) ;
-l'icône du Dock n'apparaît que tant que la fenêtre est ouverte. « Quitter » est dans le menu.
+ThermoPilot lives in the **menu bar** (hotspot temperature): no Dock icon and no window at launch.
+Open the dashboard from the "Tableau de bord" (dashboard) button in the menu, or by launching the app again (Spotlight, Finder);
+the Dock icon only appears while the window is open. "Quitter" (Quit) is in the menu.
 
-Sans helper, l'app lance le moteur en **lecture seule** (lire le SMC ne nécessite pas root).
-Pour piloter les ventilateurs : bouton **Lecture seule ▾ → Installer le helper root…** (mot de passe admin, une seule fois).
-Le helper (`/Library/PrivilegedHelperTools/com.lilian.fanengine`, LaunchDaemon) n'accepte que ton UID et root.
-**Après une modification du moteur Rust, refais « Réinstaller le helper root… ».**
+Without the helper, the app starts the engine **read-only** (reading the SMC doesn't require root).
+To control the fans: **Lecture seule ▾ → Installer le helper root…** (admin password, once).
+The helper (`/Library/PrivilegedHelperTools/com.lilian.fanengine`, LaunchDaemon) only accepts your UID and root.
+**After changing the Rust engine, run "Réinstaller le helper root…" (Reinstall root helper) again.**
 
-## CLI du moteur
+## Engine CLI
 ```bash
-engine/target/release/fanengine status     # instantané JSON
-engine/target/release/fanengine dump       # toutes les clés SMC
-engine/target/release/fanengine battery    # batterie, limiteur, pmset, consommateurs, conseils (JSON)
-engine/target/release/fanengine usage      # rapport d'utilisation et diagnostic de décharge (JSON)
-engine/target/release/fanengine bench      # coût (temps mur / CPU) de chaque lecture du moteur
-sudo engine/target/release/fanengine auto  # secours : rendre les ventilateurs à macOS
+engine/target/release/fanengine status     # JSON snapshot
+engine/target/release/fanengine dump       # every SMC key
+engine/target/release/fanengine battery    # battery, limiter, pmset, consumers, tips (JSON)
+engine/target/release/fanengine usage      # usage report and drain diagnostics (JSON)
+engine/target/release/fanengine bench      # cost (wall / CPU time) of each engine read
+sudo engine/target/release/fanengine auto  # emergency: give the fans back to macOS
 ```
 
-## Licence
+## Contributing
+Tested only on an M3 Max MacBook Pro so far. SMC key names vary between chips (M1, M2, M4, Pro/Max/Ultra),
+so reports from other Macs are very welcome: open an issue with the output of `fanengine dump` and `fanengine status`.
 
-MIT — voir [LICENSE](LICENSE).
+## License
+
+MIT — see [LICENSE](LICENSE).
