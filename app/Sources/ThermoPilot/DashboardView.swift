@@ -399,11 +399,17 @@ struct HistoryCharts: View {
     let fans: [Fan]
     @State private var window = 300.0
 
-    var body: some View {
+    /// Points de la fenêtre choisie, sous-échantillonnés à ~150 pour un rendu léger.
+    private var points: [HistoryPoint] {
         let cutoff = Date().addingTimeInterval(-window)
         let all = history.filter { $0.date >= cutoff }
         let step = max(1, all.count / 150)
-        let pts = stride(from: 0, to: all.count, by: step).map { all[$0] }
+        return stride(from: 0, to: all.count, by: step).map { all[$0] }
+    }
+
+    var body: some View {
+        let pts = points
+        let maxRPM: Double = (fans.map(\.max).max() ?? 6000) + 200
         Card(title: "Historique", icon: "chart.xyaxis.line") {
             Picker("Fenêtre", selection: $window) {
                 Text("1 min").tag(60.0)
@@ -413,34 +419,48 @@ struct HistoryCharts: View {
             .pickerStyle(.segmented).frame(width: 240)
 
             HStack(spacing: 20) {
-                Chart {
-                    ForEach(pts) { p in
-                        LineMark(x: .value("t", p.date), y: .value("°C", p.hotspot), series: .value("s", "Point chaud"))
-                            .foregroundStyle(by: .value("s", "Point chaud"))
-                        LineMark(x: .value("t", p.date), y: .value("°C", p.cpu), series: .value("s", "CPU P max"))
-                            .foregroundStyle(by: .value("s", "CPU P max"))
-                        LineMark(x: .value("t", p.date), y: .value("°C", p.gpu), series: .value("s", "GPU max"))
-                            .foregroundStyle(by: .value("s", "GPU max"))
-                    }
-                }
-                .chartForegroundStyleScale(["Point chaud": Color.red, "CPU P max": Color.orange, "GPU max": Color.purple])
-                .chartYScale(domain: 20...110)
-                .chartYAxisLabel("°C")
-                .frame(height: 180)
-
-                Chart {
-                    ForEach(pts) { p in
-                        ForEach(Array(p.fans.enumerated()), id: \.offset) { i, rpm in
-                            LineMark(x: .value("t", p.date), y: .value("RPM", rpm), series: .value("f", "Ventilateur \(i + 1)"))
-                                .foregroundStyle(by: .value("f", "Ventilateur \(i + 1)"))
-                        }
-                    }
-                }
-                .chartYScale(domain: 0...(fans.map(\.max).max() ?? 6000) + 200)
-                .chartYAxisLabel("RPM")
-                .frame(height: 180)
+                TemperatureChart(points: pts)
+                FanChart(points: pts, maxRPM: maxRPM)
             }
         }
+    }
+}
+
+private struct TemperatureChart: View {
+    let points: [HistoryPoint]
+    var body: some View {
+        Chart {
+            ForEach(points) { (p: HistoryPoint) in
+                LineMark(x: .value("t", p.date), y: .value("°C", p.hotspot), series: .value("s", "Point chaud"))
+                    .foregroundStyle(by: .value("s", "Point chaud"))
+                LineMark(x: .value("t", p.date), y: .value("°C", p.cpu), series: .value("s", "CPU P max"))
+                    .foregroundStyle(by: .value("s", "CPU P max"))
+                LineMark(x: .value("t", p.date), y: .value("°C", p.gpu), series: .value("s", "GPU max"))
+                    .foregroundStyle(by: .value("s", "GPU max"))
+            }
+        }
+        .chartForegroundStyleScale(["Point chaud": Color.red, "CPU P max": Color.orange, "GPU max": Color.purple])
+        .chartYScale(domain: 20.0...110.0)
+        .chartYAxisLabel("°C")
+        .frame(height: 180)
+    }
+}
+
+private struct FanChart: View {
+    let points: [HistoryPoint]
+    let maxRPM: Double
+    var body: some View {
+        Chart {
+            ForEach(points) { (p: HistoryPoint) in
+                ForEach(Array(p.fans.enumerated()), id: \.offset) { (i: Int, rpm: Double) in
+                    LineMark(x: .value("t", p.date), y: .value("RPM", rpm), series: .value("f", "Ventilateur \(i + 1)"))
+                        .foregroundStyle(by: .value("f", "Ventilateur \(i + 1)"))
+                }
+            }
+        }
+        .chartYScale(domain: 0.0...maxRPM)
+        .chartYAxisLabel("RPM")
+        .frame(height: 180)
     }
 }
 

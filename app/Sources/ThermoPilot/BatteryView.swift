@@ -315,9 +315,14 @@ struct PowerSettingsCard: View {
     }
 
     private func minutesPicker(_ profile: String, _ key: String, _ value: Int, _ options: [Int]) -> some View {
-        let all = Array(Set(options + [value])).sorted { ($0 == 0 ? Int.max : $0) < ($1 == 0 ? Int.max : $1) }
-        return Picker("", selection: Binding(get: { value }, set: { client.setPmset(profile, key, $0) })) {
-            ForEach(all, id: \.self) { m in Text(m == 0 ? "Jamais" : "\(m) min").tag(m) }
+        // « Jamais » (0) en dernier
+        func rank(_ m: Int) -> Int { m == 0 ? Int.max : m }
+        let all: [Int] = Set(options + [value]).sorted { rank($0) < rank($1) }
+        let binding = Binding<Int>(get: { value }, set: { client.setPmset(profile, key, $0) })
+        return Picker("", selection: binding) {
+            ForEach(all, id: \.self) { (m: Int) in
+                Text(m == 0 ? "Jamais" : "\(m) min").tag(m)
+            }
         }
         .labelsHidden().fixedSize()
     }

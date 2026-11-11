@@ -20,6 +20,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Xcode le plus récent (compilateur Swift plus rapide)
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Rust
         run: rustup toolchain install stable --profile minimal && rustup default stable
 
