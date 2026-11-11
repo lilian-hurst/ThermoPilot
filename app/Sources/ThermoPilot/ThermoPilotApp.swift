@@ -8,9 +8,10 @@ struct ThermoPilotApp: App {
     var body: some Scene {
         Window("ThermoPilot", id: "main") {
             TabView {
-                DashboardView().tabItem { Label("Thermique", systemImage: "thermometer.medium") }
-                BatteryView().tabItem { Label("Batterie", systemImage: "battery.75percent") }
+                DashboardView().tabItem { Label(tr("Thermique", "Thermal"), systemImage: "thermometer.medium") }
+                BatteryView().tabItem { Label(tr("Batterie", "Battery"), systemImage: "battery.75percent") }
             }
+                .id(client.languageChoice) // redessine tout au changement de langue
                 .environment(client)
                 .frame(minWidth: 900, minHeight: 700)
                 .onAppear {
@@ -24,7 +25,7 @@ struct ThermoPilotApp: App {
         .defaultLaunchBehavior(.suppressed)
 
         MenuBarExtra {
-            MenuBarView().environment(client).onAppear { client.start() }
+            MenuBarView().id(client.languageChoice).environment(client).onAppear { client.start() }
         } label: {
             MenuBarLabel(client: client)
         }

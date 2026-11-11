@@ -8,6 +8,8 @@ Surveille les températures CPU/GPU, pilote les ventilateurs, conseille quand le
 et maximise l'autonomie et la durée de vie de la batterie (limiteur de charge, diagnostic de décharge, apps gourmandes).
 Vit dans la barre des menus et consomme moins de 0,2 % de CPU. Interface **SwiftUI** + moteur **Rust**.
 
+🌐 **Interface en français et en anglais** — suit la langue de macOS par défaut ; changez-la à tout moment via le menu globe (🌐) en haut du tableau de bord ou dans la barre des menus.
+
 ## Télécharger
 
 ➡️ **[Dernière version (DMG)](../../releases/latest)** — ouvrez le DMG et glissez ThermoPilot dans Applications.

@@ -6,6 +6,7 @@
 
 use crate::charge::ChargeConfig;
 use crate::control::Mode;
+use crate::i18n::tr;
 use crate::power;
 use std::sync::atomic::Ordering;
 use crate::engine::Shared;
@@ -26,6 +27,7 @@ enum Request {
     SetCharge { config: ChargeConfig },
     SetPmset { profile: String, key: String, value: i64 },
     PowerPreset { name: String },
+    SetLang { lang: String },
 }
 
 pub fn serve(path: &str, shared: Arc<Shared>, allow_uid: Option<u32>) -> std::io::Result<()> {
@@ -101,9 +103,17 @@ fn handle(stream: UnixStream, shared: Arc<Shared>) {
                 }
                 format!(r#"{{"ok":true,"data":{}}}"#, shared.usage.lock().unwrap())
             }
+            Ok(Request::SetLang { lang }) => {
+                if crate::i18n::en() != lang.to_ascii_lowercase().starts_with("en") {
+                    crate::i18n::set(&lang);
+                    *shared.usage.lock().unwrap() = "null".into(); // rapport à régénérer dans la nouvelle langue
+                    shared.wake_now();
+                }
+                ok()
+            }
             Ok(Request::SetMode { mode }) => {
                 if !shared.privileged && mode != Mode::Auto {
-                    err("Le contrôle des ventilateurs nécessite le helper root (bouton « Installer le helper »).")
+                    err(&tr!("Le contrôle des ventilateurs nécessite le helper root (bouton « Installer le helper »).", "Fan control requires the root helper (\"Install helper\" button)."))
                 } else {
                     let mode = match mode {
                         Mode::Manual { percent } => Mode::Manual { percent: percent.clamp(0.0, 100.0) },
@@ -114,7 +124,7 @@ fn handle(stream: UnixStream, shared: Arc<Shared>) {
                 }
             }
             Ok(Request::SetCharge { .. } | Request::SetPmset { .. } | Request::PowerPreset { .. }) if !shared.privileged => {
-                err("Cette action nécessite le helper root (bouton « Installer le helper »).")
+                err(&tr!("Cette action nécessite le helper root (bouton « Installer le helper »).", "This action requires the root helper (\"Install helper\" button)."))
             }
             Ok(Request::SetCharge { mut config }) => {
                 config.limit = config.limit.clamp(50, 100);
@@ -135,7 +145,7 @@ fn handle(stream: UnixStream, shared: Arc<Shared>) {
                 shared.wake_now();
                 r.map(|_| ok()).unwrap_or_else(|e| err(&e))
             }
-            Err(e) => err(&format!("requête invalide : {e}")),
+            Err(e) => err(&tr!("requête invalide : {e}", "invalid request: {e}")),
         };
         if writer.write_all(resp.as_bytes()).is_err() || writer.write_all(b"\n").is_err() {
             break;
@@ -154,7 +164,7 @@ fn ok() -> String {
 /// "battery_saver" : sauvegarde les réglages batterie actuels puis applique le profil autonomie.
 /// "restore" : remet les réglages sauvegardés.
 fn preset(shared: &Shared, name: &str) -> Result<(), String> {
-    let current = power::read().ok_or("lecture pmset impossible")?.battery;
+    let current = power::read().ok_or_else(|| tr!("lecture pmset impossible", "cannot read pmset"))?.battery;
     match name {
         "battery_saver" => {
             {
@@ -170,7 +180,7 @@ fn preset(shared: &Shared, name: &str) -> Result<(), String> {
             Ok(())
         }
         "restore" => {
-            let backup = shared.settings.lock().unwrap().pmset_backup.clone().ok_or("aucune sauvegarde à restaurer")?;
+            let backup = shared.settings.lock().unwrap().pmset_backup.clone().ok_or_else(|| tr!("aucune sauvegarde à restaurer", "no backup to restore"))?;
             for (k, v) in &backup {
                 power::set("battery", k, *v)?;
             }
@@ -178,6 +188,6 @@ fn preset(shared: &Shared, name: &str) -> Result<(), String> {
             shared.save();
             Ok(())
         }
-        _ => Err(format!("préréglage inconnu : {name}")),
+        _ => Err(tr!("préréglage inconnu : {name}", "unknown preset: {name}")),
     }
 }

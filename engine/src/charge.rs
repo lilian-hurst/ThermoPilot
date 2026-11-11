@@ -7,6 +7,7 @@
 
 use crate::battery::BatteryInfo;
 use crate::smc::Smc;
+use crate::i18n::tr;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 
@@ -153,7 +154,7 @@ impl Limiter {
             ..Default::default()
         };
         let Some(bat) = bat else {
-            status.state = "Pas de batterie".into();
+            status.state = tr!("Pas de batterie", "No battery");
             return status;
         };
 
@@ -194,10 +195,10 @@ impl Limiter {
             if self.applied != Some(want) || reassert {
                 let mut err = None;
                 if let Err(e) = self.caps.set_inhibit(smc, want_inhibit) {
-                    err = Some(format!("Inhibition de charge : {e}"));
+                    err = Some(tr!("Inhibition de charge : {e}", "Charge inhibit: {e}"));
                 }
                 if let Err(e) = self.caps.set_adapter_off(smc, want_adapter_off) {
-                    err = Some(format!("Coupure adaptateur : {e}"));
+                    err = Some(tr!("Coupure adaptateur : {e}", "Adapter cut-off: {e}"));
                 }
                 if self.applied != Some(want) {
                     self.applied_at = Instant::now();
@@ -223,21 +224,21 @@ impl Limiter {
         status.effective = self.effective;
         status.last_error = self.last_error.clone();
         status.state = if !bat.external_connected {
-            "Sur batterie".into()
+            tr!("Sur batterie", "On battery")
         } else if safety_low {
-            "Batterie faible : charge forcée".into()
+            tr!("Batterie faible : charge forcée", "Low battery: charging forced")
         } else if want_adapter_off && self.discharging_down {
-            format!("Décharge vers la limite de {:.0} %", limit)
+            tr!("Décharge vers la limite de {:.0} %", "Discharging to the {:.0} % limit", limit)
         } else if (want_inhibit || want_adapter_off) && self.hot {
-            format!("Charge en pause : batterie chaude ({:.0} °C)", bat.temperature_c)
+            tr!("Charge en pause : batterie chaude ({:.0} °C)", "Charging paused: battery hot ({:.0} °C)", bat.temperature_c)
         } else if want_inhibit || want_adapter_off {
-            format!("Charge en pause : limite de {:.0} % atteinte", limit)
+            tr!("Charge en pause : limite de {:.0} % atteinte", "Charging paused: {:.0} % limit reached", limit)
         } else if bat.is_charging {
-            if active { format!("En charge jusqu'à {:.0} %", limit) } else { "En charge jusqu'à 100 %".into() }
+            if active { tr!("En charge jusqu'à {:.0} %", "Charging to {:.0} %", limit) } else { tr!("En charge jusqu'à 100 %", "Charging to 100 %") }
         } else if bat.fully_charged || level >= 99.0 {
-            "Chargée (secteur)".into()
+            tr!("Chargée (secteur)", "Charged (on AC)")
         } else {
-            "Branché, pas en charge".into()
+            tr!("Branché, pas en charge", "Plugged in, not charging")
         };
         status
     }

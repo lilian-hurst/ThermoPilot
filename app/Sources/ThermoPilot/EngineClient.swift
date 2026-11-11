@@ -14,7 +14,7 @@ final class SocketConnection {
         var addr = sockaddr_un()
         addr.sun_family = sa_family_t(AF_UNIX)
         let maxLen = MemoryLayout.size(ofValue: addr.sun_path)
-        guard path.utf8.count < maxLen else { close(fd); throw EngineError.io("chemin de socket trop long") }
+        guard path.utf8.count < maxLen else { close(fd); throw EngineError.io(tr("chemin de socket trop long", "socket path too long")) }
         withUnsafeMutablePointer(to: &addr.sun_path) {
             $0.withMemoryRebound(to: CChar.self, capacity: maxLen) { _ = strncpy($0, path, maxLen - 1) }
         }
@@ -23,7 +23,7 @@ final class SocketConnection {
                 connect(fd, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
             }
         }
-        guard rc == 0 else { close(fd); throw EngineError.io("connexion impossible à \(path)") }
+        guard rc == 0 else { close(fd); throw EngineError.io(tr("connexion impossible à \(path)", "cannot connect to \(path)")) }
         var tv = timeval(tv_sec: 3, tv_usec: 0)
         setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
         var one: Int32 = 1
@@ -36,7 +36,7 @@ final class SocketConnection {
         var line = try JSONSerialization.data(withJSONObject: obj)
         line.append(0x0A)
         let written = line.withUnsafeBytes { write(fd, $0.baseAddress, line.count) }
-        guard written == line.count else { throw EngineError.io("écriture socket") }
+        guard written == line.count else { throw EngineError.io(tr("écriture socket", "socket write")) }
         var chunk = [UInt8](repeating: 0, count: 65536)
         while true {
             if let nl = buffer.firstIndex(of: 0x0A) {
@@ -45,7 +45,7 @@ final class SocketConnection {
                 return Data(msg)
             }
             let n = read(fd, &chunk, chunk.count)
-            guard n > 0 else { throw EngineError.io("connexion fermée") }
+            guard n > 0 else { throw EngineError.io(tr("connexion fermée", "connection closed")) }
             buffer.append(chunk, count: n)
         }
     }
@@ -139,10 +139,12 @@ final class EngineClient {
 
     func connect() {
         state = .connecting
+        let lang = Lang.code
         let rootPath = Self.rootSocket
         let userPath = Self.userSocket
         io.async { [weak self] in
             if let c = try? SocketConnection(path: rootPath) {
+                _ = try? c.request(["cmd": "set_lang", "lang": lang])
                 self?.conn = c
                 DispatchQueue.main.async { self?.state = .root; self?.stopUserEngine() }
                 return
@@ -163,7 +165,7 @@ final class EngineClient {
     private func launchUserEngine(socket: String) {
         if userEngine?.isRunning != true {
             guard let bin = engineBinary() else {
-                state = .failed("Binaire fanengine introuvable dans l'app.")
+                state = .failed(tr("Binaire fanengine introuvable dans l'app.", "fanengine binary not found in the app."))
                 return
             }
             let p = Process()
@@ -171,21 +173,23 @@ final class EngineClient {
             p.arguments = ["serve", "--socket", socket, "--exit-with-parent"]
             p.standardOutput = FileHandle.nullDevice
             do { try p.run() } catch {
-                state = .failed("Lancement du moteur impossible : \(error.localizedDescription)")
+                state = .failed(tr("Lancement du moteur impossible : \(error.localizedDescription)", "Cannot start the engine: \(error.localizedDescription)"))
                 return
             }
             userEngine = p
         }
+        let lang = Lang.code
         io.async { [weak self] in
             for _ in 0..<30 {
                 if let c = try? SocketConnection(path: socket) {
+                    _ = try? c.request(["cmd": "set_lang", "lang": lang])
                     self?.conn = c
                     DispatchQueue.main.async { self?.state = .readOnly }
                     return
                 }
                 usleep(150_000)
             }
-            DispatchQueue.main.async { self?.state = .failed("Le moteur ne répond pas.") }
+            DispatchQueue.main.async { self?.state = .failed(tr("Le moteur ne répond pas.", "The engine is not responding.")) }
         }
     }
 
@@ -266,6 +270,19 @@ final class EngineClient {
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: c, trigger: nil))
     }
 
+    // MARK: Langue
+
+    /// Choix de l'utilisateur : "system", "fr" ou "en" (observé par les vues pour se redessiner).
+    var languageChoice: String = UserDefaults.standard.string(forKey: Lang.key) ?? "system"
+
+    func setLanguage(_ choice: String) {
+        Lang.set(choice)
+        languageChoice = choice
+        usage = nil
+        send(["cmd": "set_lang", "lang": Lang.code])
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.fetchUsage() }
+    }
+
     // MARK: Utilisation batterie
 
     /// Rapport d'utilisation (calculé par le moteur toutes les 30 s ; demandé seulement quand la vue est affichée).
@@ -280,13 +297,13 @@ final class EngineClient {
                         self.usage = r
                         self.usageError = nil
                     } else if !env.ok {
-                        self.usageError = "Le helper root installé est une ancienne version : réinstallez-le (pastille en haut à droite › « Réinstaller le helper root… ») pour activer le suivi d'utilisation."
+                        self.usageError = tr("Le helper root installé est une ancienne version : réinstallez-le (pastille en haut à droite › « Réinstaller le helper root… ») pour activer le suivi d'utilisation.", "The installed root helper is an older version: reinstall it (status pill at the top right › \"Réinstaller le helper root…\" / Reinstall root helper) to enable usage tracking.")
                     } else {
                         self.usageError = nil // pas encore calculé
                     }
                 }
             } catch {
-                DispatchQueue.main.async { self.usageError = "Rapport illisible : \(error.localizedDescription)" }
+                DispatchQueue.main.async { self.usageError = tr("Rapport illisible : \(error.localizedDescription)", "Unreadable report: \(error.localizedDescription)") }
             }
         }
     }
@@ -331,9 +348,9 @@ final class EngineClient {
 
     func quitProcess(pid: Int32, name: String) {
         if let app = NSRunningApplication(processIdentifier: pid) {
-            if !app.terminate() { commandError = "\(name) a refusé de quitter." }
+            if !app.terminate() { commandError = tr("\(name) a refusé de quitter.", "\(name) refused to quit.") }
         } else {
-            commandError = "« \(name) » est un processus d'arrière-plan : quittez l'application qui le lance, ou utilisez le Moniteur d'activité."
+            commandError = tr("« \(name) » est un processus d'arrière-plan : quittez l'application qui le lance, ou utilisez le Moniteur d'activité.", "\"\(name)\" is a background process: quit the app that launches it, or use Activity Monitor.")
         }
     }
 
@@ -356,7 +373,7 @@ final class EngineClient {
 
     func installHelper() {
         guard let bin = engineBinary(), let script = Bundle.main.url(forResource: "install-helper", withExtension: "sh") ?? devScript("install-helper.sh") else {
-            commandError = "Script d'installation introuvable."
+            commandError = tr("Script d'installation introuvable.", "Install script not found.")
             return
         }
         runPrivileged("\(sh(script.path)) \(sh(bin.path)) \(getuid())") { [weak self] err in

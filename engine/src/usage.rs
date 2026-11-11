@@ -5,6 +5,7 @@
 
 use crate::battery::BatteryInfo;
 use crate::battery_advice::{tip, Tip};
+use crate::i18n::{tr, trs};
 use crate::energy::ProcEnergy;
 use crate::power::PmsetProfiles;
 use serde::{Deserialize, Serialize};
@@ -425,37 +426,51 @@ fn parse_charge(msg: &str) -> Option<(bool, f64)> {
     Some((ac, digits.parse().ok()?))
 }
 
+/// Cause d'un réveil (code stable ; libellé traduit au moment du rapport).
 fn wake_reason(msg: &str) -> String {
     let m = msg.to_ascii_lowercase();
     let r = if m.contains("rtc/maintenance") {
-        "Maintenance réseau (iCloud, Localiser, mail…)"
+        "maint"
     } else if m.contains("rtc/sleepservice") {
-        "Tâches planifiées (Sleep Service)"
+        "sleepsvc"
     } else if m.contains("bluetooth") {
-        "Bluetooth (appareil connecté)"
+        "bt"
     } else if m.contains("wifibt") {
-        "Wi-Fi / réseau"
+        "net"
     } else if m.contains("usb") {
-        "Branchement USB-C"
+        "usb"
     } else if m.contains("hid") || m.contains("useractivity") {
-        "Clavier / trackpad"
+        "hid"
     } else if m.contains("notification") {
-        "Notification"
+        "notif"
     } else {
-        "Autre"
+        "other"
     };
     r.to_string()
 }
 
+fn reason_label(code: &str) -> String {
+    match code {
+        "maint" => tr!("Maintenance réseau (iCloud, Localiser, mail…)", "Network maintenance (iCloud, Find My, mail…)"),
+        "sleepsvc" => tr!("Tâches planifiées (Sleep Service)", "Scheduled tasks (Sleep Service)"),
+        "bt" => tr!("Bluetooth (appareil connecté)", "Bluetooth (connected device)"),
+        "net" => tr!("Wi-Fi / réseau", "Wi-Fi / network"),
+        "usb" => tr!("Branchement USB-C", "USB-C connection"),
+        "hid" => tr!("Clavier / trackpad", "Keyboard / trackpad"),
+        "notif" => tr!("Notification", "Notification"),
+        _ => tr!("Autre", "Other"),
+    }
+}
+
 fn sleep_reason(msg: &str) -> String {
     if msg.contains("Clamshell") {
-        "Écran rabattu".into()
+        "lid".into()
     } else if msg.contains("Idle Sleep") {
-        "Inactivité".into()
+        "idle".into()
     } else if msg.contains("Software Sleep") {
-        "Menu Pomme / logiciel".into()
+        "software".into()
     } else {
-        "Rendormissement".into()
+        "resleep".into()
     }
 }
 
@@ -533,10 +548,14 @@ fn local_day(t: f64) -> (String, String) {
     let tt = t as libc::time_t;
     let mut tm: libc::tm = unsafe { std::mem::zeroed() };
     unsafe { libc::localtime_r(&tt, &mut tm) };
-    const DAYS: [&str; 7] = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
+    let days: [&str; 7] = if crate::i18n::en() {
+        ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+    } else {
+        ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."]
+    };
     (
         format!("{:04}-{:02}-{:02}", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday),
-        format!("{} {}", DAYS[(tm.tm_wday as usize) % 7], tm.tm_mday),
+        format!("{} {}", days[(tm.tm_wday as usize) % 7], tm.tm_mday),
     )
 }
 
@@ -598,31 +617,31 @@ fn apps_since(data: &UsageData, from_hour: i64) -> (Vec<AppUsage>, f64, f64, f64
 fn app_hint(name: &str) -> &'static str {
     let n = name.to_ascii_lowercase();
     if n.contains("chrome") || n.contains("brave") || n.contains("edge") || n.contains("opera") {
-        "Les navigateurs Chromium consomment plus que Safari : fermez les onglets inutiles (vidéo, pages lourdes), suspendez les onglets inactifs, ou utilisez Safari sur batterie."
+        trs!("Les navigateurs Chromium consomment plus que Safari : fermez les onglets inutiles (vidéo, pages lourdes), suspendez les onglets inactifs, ou utilisez Safari sur batterie.", "Chromium browsers use more power than Safari: close unneeded tabs (video, heavy pages), suspend inactive tabs, or use Safari on battery.")
     } else if n.contains("firefox") {
-        "Fermez les onglets lourds (vidéo, pages qui se rafraîchissent) ; Safari est plus économe sur batterie."
+        trs!("Fermez les onglets lourds (vidéo, pages qui se rafraîchissent) ; Safari est plus économe sur batterie.", "Close heavy tabs (video, auto-refreshing pages); Safari is more efficient on battery.")
     } else if n.contains("safari") || n.contains("webkit") {
-        "Un onglet est probablement actif en arrière-plan (vidéo, animation, page qui se rafraîchit) : Fenêtre › Activité du Safari pour l'identifier."
+        trs!("Un onglet est probablement actif en arrière-plan (vidéo, animation, page qui se rafraîchit) : Fenêtre › Activité du Safari pour l'identifier.", "A tab is probably busy in the background (video, animation, auto-refreshing page): Window › Safari Activity to find it.")
     } else if n == "windowserver" {
-        "C'est le rendu de l'écran : baissez la luminosité, évitez les fonds animés, débranchez un écran externe inutile ou limitez le rafraîchissement à 60 Hz sur batterie."
+        trs!("C'est le rendu de l'écran : baissez la luminosité, évitez les fonds animés, débranchez un écran externe inutile ou limitez le rafraîchissement à 60 Hz sur batterie.", "This is screen rendering: lower brightness, avoid animated wallpapers, unplug an unused external display, or limit refresh to 60 Hz on battery.")
     } else if n == "kernel_task" {
-        "kernel_task grimpe quand le Mac est chaud : laissez-le refroidir, surélevez-le, évitez de l'utiliser sur un lit ou un coussin."
+        trs!("kernel_task grimpe quand le Mac est chaud : laissez-le refroidir, surélevez-le, évitez de l'utiliser sur un lit ou un coussin.", "kernel_task rises when the Mac is hot: let it cool down, raise it, avoid using it on a bed or cushion.")
     } else if n.starts_with("mds") || n.starts_with("mdworker") || n == "corespotlightd" {
-        "Indexation Spotlight (temporaire après une mise à jour ou beaucoup de nouveaux fichiers). Excluez les gros dossiers (node_modules, datasets, VM) dans Réglages › Spotlight."
+        trs!("Indexation Spotlight (temporaire après une mise à jour ou beaucoup de nouveaux fichiers). Excluez les gros dossiers (node_modules, datasets, VM) dans Réglages › Spotlight.", "Spotlight indexing (temporary after an update or many new files). Exclude large folders (node_modules, datasets, VMs) in Settings › Spotlight.")
     } else if n == "photoanalysisd" || n == "mediaanalysisd" || n == "photolibraryd" {
-        "Analyse de la photothèque : elle se fait normalement sur secteur. Laissez le Mac branché une nuit pour qu'elle se termine."
+        trs!("Analyse de la photothèque : elle se fait normalement sur secteur. Laissez le Mac branché une nuit pour qu'elle se termine.", "Photo library analysis: it normally runs on AC power. Leave the Mac plugged in overnight so it can finish.")
     } else if n == "backupd" || n.contains("timemachine") {
-        "Sauvegarde Time Machine en cours : planifiez-la sur secteur si possible."
+        trs!("Sauvegarde Time Machine en cours : planifiez-la sur secteur si possible.", "Time Machine backup in progress: schedule it on AC power if possible.")
     } else if n.contains("docker") || n.contains("virtualization") || n.contains("qemu") || n.contains("utm") || n.contains("parallels") || n.contains("tart") {
-        "Une machine virtuelle / Docker tourne en continu : arrêtez les conteneurs ou VM inutiles sur batterie."
+        trs!("Une machine virtuelle / Docker tourne en continu : arrêtez les conteneurs ou VM inutiles sur batterie.", "A virtual machine / Docker is running continuously: stop unneeded containers or VMs on battery.")
     } else if n.contains("ollama") || n.contains("lm studio") || n.contains("lmstudio") || n.starts_with("python") || n.contains("jupyter") {
-        "Calcul lourd (modèle IA, script Python…) : réservez ces tâches au secteur, ou arrêtez les serveurs de modèles qui restent chargés."
+        trs!("Calcul lourd (modèle IA, script Python…) : réservez ces tâches au secteur, ou arrêtez les serveurs de modèles qui restent chargés.", "Heavy compute (AI model, Python script…): keep these tasks for AC power, or stop model servers that stay loaded.")
     } else if n.contains("helper") || n.contains("electron") || ["claude", "slack", "discord", "code", "cursor", "notion", "spotify", "teams", "whatsapp"].iter().any(|k| n.contains(k)) {
-        "App basée sur un navigateur intégré (Electron) : elle consomme même en arrière-plan. Quittez-la quand vous ne l'utilisez pas, ou utilisez la version web dans Safari."
+        trs!("App basée sur un navigateur intégré (Electron) : elle consomme même en arrière-plan. Quittez-la quand vous ne l'utilisez pas, ou utilisez la version web dans Safari.", "App built on an embedded browser (Electron): it uses power even in the background. Quit it when you're not using it, or use the web version in Safari.")
     } else if n.contains("zoom") || n.contains("facetime") || n.contains("webex") {
-        "La visio sollicite caméra, encodage vidéo et réseau : coupez la vidéo quand elle n'est pas nécessaire."
+        trs!("La visio sollicite caméra, encodage vidéo et réseau : coupez la vidéo quand elle n'est pas nécessaire.", "Video calls use the camera, video encoding and network: turn video off when you don't need it.")
     } else {
-        "Quittez-la quand vous ne l'utilisez pas, ou vérifiez ses réglages (synchronisation, animations, actualisation en arrière-plan)."
+        trs!("Quittez-la quand vous ne l'utilisez pas, ou vérifiez ses réglages (synchronisation, animations, actualisation en arrière-plan).", "Quit it when you're not using it, or check its settings (sync, animations, background refresh).")
     }
 }
 
@@ -727,7 +746,7 @@ fn build_report(
                             pct_per_h: r2(rate),
                             darkwakes: dw,
                             on_battery,
-                            main_reason: rs.into_iter().max_by_key(|x| x.1).map(|x| x.0),
+                            main_reason: rs.into_iter().max_by_key(|x| x.1).map(|x| reason_label(&x.0)),
                             level,
                         });
                     }
@@ -832,7 +851,8 @@ fn build_report(
         .collect();
     days.reverse();
     days.truncate(8);
-    let mut wake_reasons: Vec<Reason> = reasons.into_iter().map(|(label, count)| Reason { label, count }).collect();
+    let top_reason_code = reasons.iter().max_by_key(|x| *x.1).map(|x| x.0.clone()).unwrap_or_default();
+    let mut wake_reasons: Vec<Reason> = reasons.into_iter().map(|(code, count)| Reason { label: reason_label(&code), count }).collect();
     wake_reasons.sort_by(|a, b| b.count.cmp(&a.count));
 
     // ---- énergie par app
@@ -853,7 +873,7 @@ fn build_report(
     let cap_wh = bat.map(|b| b.max_mah * b.voltage_v.max(10.0) / 1000.0).unwrap_or(0.0);
 
     // 1. Éveillé sur batterie
-    let (rate_h, rate_p, window) = if awake_h24 >= 0.5 { (awake_h24, awake_pct24, "24 h") } else { (awake_h, awake_pct, "7 jours") };
+    let (rate_h, rate_p, window) = if awake_h24 >= 0.5 { (awake_h24, awake_pct24, "24 h") } else { (awake_h, awake_pct, trs!("7 jours", "7 days")) };
     let avg_cpu = if b_s > 0.0 { cpu_sum / b_s } else { 0.0 };
     let avg_w = if b_s > 60.0 { Some(b_j / b_s) } else { None };
     if rate_h >= 0.5 {
@@ -870,34 +890,34 @@ fn build_report(
         } else {
             "bad"
         };
-        let autonomy = if r > 0.1 { format!(" — soit ≈ {} pour une charge complète", fmt_h(100.0 / r)) } else { String::new() };
-        let mut detail = format!("Moyenne sur {window} d'utilisation sur batterie ({}){autonomy}.", fmt_h(rate_h));
+        let autonomy = if r > 0.1 { tr!(" — soit ≈ {} pour une charge complète", " — about {} for a full charge", fmt_h(100.0 / r)) } else { String::new() };
+        let mut detail = tr!("Moyenne sur {window} d'utilisation sur batterie ({}){autonomy}.", "Average over {window} of battery use ({}){autonomy}.", fmt_h(rate_h));
         if let Some(w) = avg_w {
-            detail += &format!(" Puissance moyenne mesurée : {:.1} W, CPU moyen {:.0} %.", w, avg_cpu);
+            detail += &tr!(" Puissance moyenne mesurée : {:.1} W, CPU moyen {:.0} %.", " Measured average power: {:.1} W, average CPU {:.0} %.", w, avg_cpu);
         }
         detail += match level {
-            "good" => " Normal pour un usage léger à modéré.",
-            "info" if heavy => " Élevé mais cohérent avec la charge de travail (CPU très sollicité).",
-            "info" => " Normal pour un usage soutenu (développement, nombreuses apps ouvertes).",
-            "warn" if heavy => " Très élevé, explicable par la charge de travail : réservez les tâches lourdes au secteur.",
-            "warn" => " Plus élevé que la normale pour la charge observée : voyez les apps ci-dessous.",
-            _ => " Anormalement élevé : une app ou un processus consomme fortement en continu.",
+            "good" => trs!(" Normal pour un usage léger à modéré.", " Normal for light to moderate use."),
+            "info" if heavy => trs!(" Élevé mais cohérent avec la charge de travail (CPU très sollicité).", " High but consistent with the workload (CPU heavily used)."),
+            "info" => trs!(" Normal pour un usage soutenu (développement, nombreuses apps ouvertes).", " Normal for sustained use (development, many open apps)."),
+            "warn" if heavy => trs!(" Très élevé, explicable par la charge de travail : réservez les tâches lourdes au secteur.", " Very high, explained by the workload: keep heavy tasks for AC power."),
+            "warn" => trs!(" Plus élevé que la normale pour la charge observée : voyez les apps ci-dessous.", " Higher than normal for the observed load: see the apps below."),
+            _ => trs!(" Anormalement élevé : une app ou un processus consomme fortement en continu.", " Abnormally high: an app or process is drawing heavily all the time."),
         };
         checks.push(Check {
             id: "awake",
-            label: "Décharge en utilisation".into(),
+            label: tr!("Décharge en utilisation", "Drain while in use"),
             value: format!("{:.1} %/h", r),
-            reference: format!("normal ≤ {AWAKE_GOOD:.0} %/h (léger), ≤ {AWAKE_HIGH:.0} %/h (soutenu)"),
+            reference: tr!("normal ≤ {AWAKE_GOOD:.0} %/h (léger), ≤ {AWAKE_HIGH:.0} %/h (soutenu)", "normal ≤ {AWAKE_GOOD:.0} %/h (light), ≤ {AWAKE_HIGH:.0} %/h (sustained)"),
             detail,
             level,
         });
     } else {
         checks.push(Check {
             id: "awake",
-            label: "Décharge en utilisation".into(),
+            label: tr!("Décharge en utilisation", "Drain while in use"),
             value: "—".into(),
-            reference: format!("normal ≤ {AWAKE_GOOD:.0} %/h"),
-            detail: "Pas encore assez de temps d'utilisation sur batterie (30 min minimum).".into(),
+            reference: tr!("normal ≤ {AWAKE_GOOD:.0} %/h", "normal ≤ {AWAKE_GOOD:.0} %/h"),
+            detail: tr!("Pas encore assez de temps d'utilisation sur batterie (30 min minimum).", "Not enough time on battery yet (30 min minimum)."),
             level: "unknown",
         });
     }
@@ -909,16 +929,17 @@ fn build_report(
         let pct_h = if cap_wh > 0.0 { format!(" (≈ {:.1} %/h)", w / cap_wh * 100.0) } else { String::new() };
         checks.push(Check {
             id: "idle",
-            label: "Consommation au repos (écran allumé)".into(),
+            label: tr!("Consommation au repos (écran allumé)", "Idle power (display on)"),
             value: format!("{:.1} W", w),
             reference: format!("normal ≤ {IDLE_GOOD_W:.0} W"),
-            detail: format!(
+            detail: tr!(
                 "Mesurée sur {} où le CPU et le GPU étaient presque inactifs{pct_h}. {}",
+                "Measured over {} with the CPU and GPU almost idle{pct_h}. {}",
                 fmt_h(idle_s / 3600.0),
                 match level {
-                    "good" => "Normal : l'écran est le principal consommateur.",
-                    "warn" => "Un peu élevé : luminosité forte, écran externe, ou processus en arrière-plan.",
-                    _ => "Anormal : quelque chose consomme en permanence en arrière-plan (voir les apps).",
+                    "good" => trs!("Normal : l'écran est le principal consommateur.", "Normal: the display is the main consumer."),
+                    "warn" => trs!("Un peu élevé : luminosité forte, écran externe, ou processus en arrière-plan.", "A bit high: high brightness, external display, or background processes."),
+                    _ => trs!("Anormal : quelque chose consomme en permanence en arrière-plan (voir les apps).", "Abnormal: something keeps drawing power in the background (see the apps)."),
                 }
             ),
             level,
@@ -926,10 +947,10 @@ fn build_report(
     } else {
         checks.push(Check {
             id: "idle",
-            label: "Consommation au repos (écran allumé)".into(),
+            label: tr!("Consommation au repos (écran allumé)", "Idle power (display on)"),
             value: "—".into(),
             reference: format!("normal ≤ {IDLE_GOOD_W:.0} W"),
-            detail: "Mesure en cours : il faut ~10 min au repos sur batterie (enregistrée par ThermoPilot).".into(),
+            detail: tr!("Mesure en cours : il faut ~10 min au repos sur batterie (enregistrée par ThermoPilot).", "Measuring: needs ~10 min idle on battery (recorded by ThermoPilot)."),
             level: "unknown",
         });
     }
@@ -940,21 +961,22 @@ fn build_report(
         let level = if r <= SLEEP_GOOD { "good" } else if r <= SLEEP_BAD { "warn" } else { "bad" };
         let dw: usize = sleeps.iter().filter(|s| s.on_battery).map(|s| s.darkwakes).sum();
         let sh: f64 = sleeps.iter().filter(|s| s.on_battery).map(|s| s.hours).sum();
-        let dw_txt = if sh > 0.0 { format!(" {:.1} réveils en arrière-plan par heure.", dw as f64 / sh) } else { String::new() };
+        let dw_txt = if sh > 0.0 { tr!(" {:.1} réveils en arrière-plan par heure.", " {:.1} background wake-ups per hour.", dw as f64 / sh) } else { String::new() };
         checks.push(Check {
             id: "sleep",
-            label: "Vidange en veille".into(),
+            label: tr!("Vidange en veille", "Drain during sleep"),
             value: format!("{:.2} %/h", r),
-            reference: format!("normal ≤ {SLEEP_GOOD} %/h (≈ 4 % par nuit)"),
-            detail: format!(
+            reference: tr!("normal ≤ {SLEEP_GOOD} %/h (≈ 4 % par nuit)", "normal ≤ {SLEEP_GOOD} %/h (≈ 4 % per night)"),
+            detail: tr!(
                 "{} de veille sur batterie analysées, {:.0} % perdus (≈ {:.0} % sur 8 h).{dw_txt} {}",
+                "{} of sleep on battery analyzed, {:.0} % lost (≈ {:.0} % per 8 h).{dw_txt} {}",
                 fmt_h(sleep_h),
                 sleep_pct.max(0.0),
                 r * 8.0,
                 match level {
-                    "good" => "Normal.",
-                    "warn" => "Un peu élevé : le Mac se réveille souvent (réseau, Bluetooth, tâches).",
-                    _ => "Anormal : le Mac ne dort pas vraiment (réveils fréquents ou app qui l'en empêche).",
+                    "good" => trs!("Normal.", "Normal."),
+                    "warn" => trs!("Un peu élevé : le Mac se réveille souvent (réseau, Bluetooth, tâches).", "A bit high: the Mac wakes up often (network, Bluetooth, tasks)."),
+                    _ => trs!("Anormal : le Mac ne dort pas vraiment (réveils fréquents ou app qui l'en empêche).", "Abnormal: the Mac isn't really sleeping (frequent wake-ups or an app preventing sleep)."),
                 }
             ),
             level,
@@ -962,10 +984,10 @@ fn build_report(
     } else {
         checks.push(Check {
             id: "sleep",
-            label: "Vidange en veille".into(),
+            label: tr!("Vidange en veille", "Drain during sleep"),
             value: "—".into(),
-            reference: format!("normal ≤ {SLEEP_GOOD} %/h"),
-            detail: "Pas assez de veille sur batterie dans le journal macOS (2 h minimum).".into(),
+            reference: tr!("normal ≤ {SLEEP_GOOD} %/h", "normal ≤ {SLEEP_GOOD} %/h"),
+            detail: tr!("Pas assez de veille sur batterie dans le journal macOS (2 h minimum).", "Not enough sleep on battery in the macOS log (2 h minimum)."),
             level: "unknown",
         });
     }
@@ -976,34 +998,34 @@ fn build_report(
     let verdict = match worst {
         _ if known == 0 => Check {
             id: "verdict",
-            label: "Analyse en cours".into(),
+            label: tr!("Analyse en cours", "Analysis in progress"),
             value: String::new(),
             reference: String::new(),
-            detail: "ThermoPilot a besoin d'un peu d'utilisation sur batterie pour juger la décharge.".into(),
+            detail: tr!("ThermoPilot a besoin d'un peu d'utilisation sur batterie pour juger la décharge.", "ThermoPilot needs some battery use to assess the drain."),
             level: "unknown",
         },
         Some(c) if c.level == "bad" => Check {
             id: "verdict",
-            label: "Décharge anormale".into(),
+            label: tr!("Décharge anormale", "Abnormal drain"),
             value: String::new(),
             reference: String::new(),
-            detail: format!("{} : {}. Suivez les recommandations ci-dessous.", c.label, c.value),
+            detail: tr!("{} : {}. Suivez les recommandations ci-dessous.", "{}: {}. Follow the recommendations below.", c.label, c.value),
             level: "bad",
         },
         Some(c) if c.level == "warn" => Check {
             id: "verdict",
-            label: "Décharge un peu élevée".into(),
+            label: tr!("Décharge un peu élevée", "Slightly high drain"),
             value: String::new(),
             reference: String::new(),
-            detail: format!("{} : {} (repère : {}).", c.label, c.value, c.reference),
+            detail: tr!("{} : {} (repère : {}).", "{}: {} (baseline: {}).", c.label, c.value, c.reference),
             level: "warn",
         },
         _ => Check {
             id: "verdict",
-            label: "Décharge normale".into(),
+            label: tr!("Décharge normale", "Normal drain"),
             value: String::new(),
             reference: String::new(),
-            detail: "La batterie se vide à un rythme normal pour votre utilisation.".into(),
+            detail: tr!("La batterie se vide à un rythme normal pour votre utilisation.", "The battery drains at a normal rate for your usage."),
             level: "good",
         },
     };
@@ -1011,7 +1033,7 @@ fn build_report(
     // ---- recommandations
     let mut tips: Vec<Tip> = vec![];
     let running = |name: &str| top.iter().find(|p| p.name == name).map(|p| p.pid);
-    let ref_apps = if total_24h_wh >= 1.0 { (&apps_24h, total_24h_wh, "24 h") } else { (&apps_7d, total_7d_wh, "7 jours") };
+    let ref_apps = if total_24h_wh >= 1.0 { (&apps_24h, total_24h_wh, "24 h") } else { (&apps_7d, total_7d_wh, trs!("7 jours", "7 days")) };
     for a in ref_apps.0.iter().take(4) {
         if a.share_pct < 12.0 || a.wh < 0.5 {
             continue;
@@ -1020,12 +1042,12 @@ fn build_report(
         let mut t = tip(
             "app_energy",
             level,
-            format!("{} : {:.0} % de l'énergie sur batterie", a.name, a.share_pct),
-            format!("{:.1} Wh sur {} ({:.1} W en moyenne, {:.0} min CPU). {}", a.wh, ref_apps.2, a.avg_w, a.cpu_min, app_hint(&a.name)),
+            tr!("{} : {:.0} % de l'énergie sur batterie", "{}: {:.0} % of battery energy", a.name, a.share_pct),
+            tr!("{:.1} Wh sur {} ({:.1} W en moyenne, {:.0} min CPU). {}", "{:.1} Wh over {} ({:.1} W average, {:.0} CPU min). {}", a.wh, ref_apps.2, a.avg_w, a.cpu_min, app_hint(&a.name)),
         );
         if let Some(pid) = running(&a.name) {
             if !SYSTEM_HOLDERS.contains(&a.name.as_str()) && a.name != "kernel_task" && pid > 1 {
-                t = t.act(format!("quit:{pid}:{}", a.name), "Quitter");
+                t = t.act(format!("quit:{pid}:{}", a.name), tr!("Quitter", "Quit"));
             }
         }
         tips.push(t);
@@ -1036,8 +1058,9 @@ fn build_report(
             tips.push(tip(
                 "display_share",
                 "info",
-                format!("Écran et système : {:.0} % de l'énergie", other / ref_apps.1 * 100.0),
-                "La part non attribuée aux apps correspond surtout à l'écran (rétroéclairage), au Wi-Fi et au reste de la carte mère. Baisser la luminosité de 2-3 crans est le levier le plus efficace.".to_string(),
+                tr!("Écran et système : {:.0} % de l'énergie", "Display and system: {:.0} % of energy", other / ref_apps.1 * 100.0),
+                tr!("La part non attribuée aux apps correspond surtout à l'écran (rétroéclairage), au Wi-Fi et au reste de la carte mère. Baisser la luminosité de 2-3 crans est le levier le plus efficace.",
+                    "The share not attributed to apps is mostly the display (backlight), Wi-Fi and the rest of the logic board. Lowering brightness by 2-3 steps is the most effective lever."),
             ));
         }
     }
@@ -1048,15 +1071,16 @@ fn build_report(
             tip(
                 "blocker",
                 if mins >= 30 { "warn" } else { "info" },
-                format!("{} empêche la mise en veille", b.name),
-                format!(
+                tr!("{} empêche la mise en veille", "{} prevents sleep", b.name),
+                tr!(
                     "Assertion « {} »{} active depuis {}. Tant qu'elle est active, le Mac ne se met pas en veille seul et l'écran peut rester allumé.",
+                    "Assertion \"{}\"{} active for {}. While it is active, the Mac won't sleep on its own and the display may stay on.",
                     b.kind,
                     if b.label.is_empty() { String::new() } else { format!(" ({})", b.label) },
                     b.since
                 ),
             )
-            .act(format!("quit:{}:{}", b.pid, b.name), "Quitter"),
+            .act(format!("quit:{}:{}", b.pid, b.name), tr!("Quitter", "Quit")),
         );
     }
     let sleep_check = checks.iter().find(|c| c.id == "sleep").map(|c| c.level).unwrap_or("unknown");
@@ -1064,39 +1088,51 @@ fn build_report(
         let batt = pmset.map(|p| &p.battery);
         let get = |k: &str| batt.and_then(|m| m.get(k)).copied();
         let top_reason = wake_reasons.first().map(|r| r.label.clone()).unwrap_or_default();
+        let top_code = top_reason_code.as_str();
         if get("tcpkeepalive") == Some(1) {
             tips.push(
                 tip(
                     "tcpkeepalive",
                     "warn",
-                    "Couper le réseau pendant la veille",
-                    format!("La cause principale des réveils est « {top_reason} ». Désactiver « TCP keep-alive » sur batterie supprime la plupart des réveils réseau (Localiser mon Mac ne pourra plus localiser le Mac endormi)."),
+                    tr!("Couper le réseau pendant la veille", "Turn off networking during sleep"),
+                    tr!("La cause principale des réveils est « {top_reason} ». Désactiver « TCP keep-alive » sur batterie supprime la plupart des réveils réseau (Localiser mon Mac ne pourra plus localiser le Mac endormi).",
+                        "The main wake-up cause is \"{top_reason}\". Disabling \"TCP keep-alive\" on battery removes most network wake-ups (Find My Mac won't be able to locate the sleeping Mac)."),
                 )
-                .act("pmset:battery:tcpkeepalive:0", "Désactiver sur batterie"),
+                .act("pmset:battery:tcpkeepalive:0", tr!("Désactiver sur batterie", "Disable on battery")),
             );
         }
         if get("powernap") == Some(1) {
-            tips.push(tip("powernap_sleep", "warn", "Désactiver Power Nap sur batterie", "Power Nap réveille le Mac pour synchroniser mail, iCloud et sauvegardes.").act("pmset:battery:powernap:0", "Désactiver"));
+            tips.push(
+                tip("powernap_sleep", "warn", tr!("Désactiver Power Nap sur batterie", "Disable Power Nap on battery"),
+                    tr!("Power Nap réveille le Mac pour synchroniser mail, iCloud et sauvegardes.", "Power Nap wakes the Mac to sync mail, iCloud and backups."))
+                .act("pmset:battery:powernap:0", tr!("Désactiver", "Disable")),
+            );
         }
-        if top_reason.starts_with("Bluetooth") {
-            tips.push(tip("bt_wake", "info", "Le Bluetooth réveille le Mac", "Un appareil Bluetooth (souris, casque, manette) réveille le Mac en veille. Éteignez-le ou déconnectez-le, ou désactivez « Autoriser les appareils Bluetooth à réactiver l'ordinateur » (Réglages › Bluetooth › Avancé)."));
+        if top_code == "bt" {
+            tips.push(tip("bt_wake", "info", tr!("Le Bluetooth réveille le Mac", "Bluetooth wakes the Mac"),
+                tr!("Un appareil Bluetooth (souris, casque, manette) réveille le Mac en veille. Éteignez-le ou déconnectez-le, ou désactivez « Autoriser les appareils Bluetooth à réactiver l'ordinateur » (Réglages › Bluetooth › Avancé).",
+                    "A Bluetooth device (mouse, headphones, controller) wakes the Mac from sleep. Turn it off or disconnect it, or disable \"Allow Bluetooth devices to wake this computer\" (Settings › Bluetooth › Advanced).")));
         }
     } else if sleep_check == "good" {
-        tips.push(tip("sleep_ok", "good", "Veille saine", "Le Mac perd peu de batterie quand il dort : rien à changer."));
+        tips.push(tip("sleep_ok", "good", tr!("Veille saine", "Healthy sleep"),
+            tr!("Le Mac perd peu de batterie quand il dort : rien à changer.", "The Mac loses little battery while asleep: nothing to change.")));
     }
     if checks.iter().any(|c| c.id == "idle" && c.level != "good" && c.level != "unknown") {
         tips.push(
             tip(
                 "idle_high",
                 "info",
-                "Réduire la consommation au repos",
-                "Baissez la luminosité, activez « Assombrir légèrement l'écran sur batterie », fermez les apps en arrière-plan listées ci-dessous et débranchez les périphériques USB inutiles.",
+                tr!("Réduire la consommation au repos", "Reduce idle power"),
+                tr!("Baissez la luminosité, activez « Assombrir légèrement l'écran sur batterie », fermez les apps en arrière-plan listées ci-dessous et débranchez les périphériques USB inutiles.",
+                    "Lower brightness, enable \"Slightly dim the display on battery\", quit the background apps listed below and unplug unused USB devices."),
             )
-            .act("pmset:battery:lessbright:1", "Assombrir sur batterie"),
+            .act("pmset:battery:lessbright:1", tr!("Assombrir sur batterie", "Dim on battery")),
         );
     }
     if data.samples.is_empty() {
-        tips.push(tip("collecting", "info", "Collecte en cours", "La consommation par app est mesurée par ThermoPilot lorsque le Mac est sur batterie. Les chiffres s'affinent au fil des heures (historique conservé 7 jours)."));
+        tips.push(tip("collecting", "info", tr!("Collecte en cours", "Collecting data"),
+            tr!("La consommation par app est mesurée par ThermoPilot lorsque le Mac est sur batterie. Les chiffres s'affinent au fil des heures (historique conservé 7 jours).",
+                "Per-app energy is measured by ThermoPilot while the Mac runs on battery. Figures get more accurate over the hours (7-day history).")));
     }
 
     UsageReport {

@@ -8,7 +8,7 @@ Monitors CPU/GPU temperatures, controls the fans, tells you when to spin them up
 and maximizes both battery runtime and battery lifespan (charge limiter, drain diagnostics, energy-hungry apps).
 Lives in the menu bar and uses less than 0.2 % CPU. **SwiftUI** interface + **Rust** engine.
 
-> 🇫🇷 The app's interface is currently in French. An English localization is planned — contributions welcome.
+🌐 **English and French interface** — follows your macOS language by default; switch anytime from the globe menu (🌐) in the dashboard header or the menu bar.
 
 ## Download
 
@@ -23,10 +23,10 @@ Lives in the menu bar and uses less than 0.2 % CPU. **SwiftUI** interface + **Ru
   xattr -dr com.apple.quarantine /Applications/ThermoPilot.app
   ```
 
-**Controlling fans and charging**: status pill at the top right of the dashboard › **Installer le helper root…** (Install root helper)
-— administrator password, once. Without the helper, the app runs read-only.
+**Controlling fans and charging**: status pill at the top right of the dashboard › **Install root helper…**
+(administrator password, once). Without the helper, the app runs read-only.
 
-**Uninstall**: status pill › **Désinstaller le helper** (Uninstall helper), then move the app to the Trash.
+**Uninstall**: status pill › **Uninstall root helper…**, then move the app to the Trash.
 
 > ⚠️ Controlling fans and charging writes to the Mac's SMC. ThermoPilot always hands control back to macOS
 > (app quit, sleep, helper stopped) and forces the fans to maximum above 100 °C, but use it at your own risk.
@@ -43,6 +43,7 @@ Lives in the menu bar and uses less than 0.2 % CPU. **SwiftUI** interface + **Ru
 - Temperatures: CPU (P / E cores), GPU, SoC, SSD, battery, Wi-Fi, palm rest, airflow (+ every raw SMC key)
 - Speed of both fans (RPM, min/max, target, mode), CPU load (per core), GPU load, system power
 - 1 / 5 / 10 min history charts
+- **Language**: English / French, following macOS by default (globe menu to switch); the engine's advice and reports follow the same language
 - Control modes: **Auto (macOS)**, **Manual** (0–100 %), **Curve** (Silent / Balanced / Performance)
 - **Advisor**: level (cool → critical), °C/min trend, recommended fan speed, "Apply" button, notifications
 - **Quitting the app gives control back to macOS**: as soon as no ThermoPilot instance has been connected to the helper
@@ -98,13 +99,13 @@ Requires Rust (stable) and Xcode 16+ / Swift 6.
 open build/ThermoPilot.app
 ```
 ThermoPilot lives in the **menu bar** (hotspot temperature): no Dock icon and no window at launch.
-Open the dashboard from the "Tableau de bord" (dashboard) button in the menu, or by launching the app again (Spotlight, Finder);
-the Dock icon only appears while the window is open. "Quitter" (Quit) is in the menu.
+Open the dashboard from the "Dashboard" button in the menu, or by launching the app again (Spotlight, Finder);
+the Dock icon only appears while the window is open. "Quit" is in the menu.
 
 Without the helper, the app starts the engine **read-only** (reading the SMC doesn't require root).
-To control the fans: **Lecture seule ▾ → Installer le helper root…** (admin password, once).
+To control the fans: **Read-only ▾ → Install root helper…** (admin password, once).
 The helper (`/Library/PrivilegedHelperTools/com.lilian.fanengine`, LaunchDaemon) only accepts your UID and root.
-**After changing the Rust engine, run "Réinstaller le helper root…" (Reinstall root helper) again.**
+**After changing the Rust engine, run "Reinstall root helper…" again.**
 
 ## Engine CLI
 ```bash

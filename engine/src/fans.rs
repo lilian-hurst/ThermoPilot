@@ -1,5 +1,6 @@
 //! Lecture et pilotage des ventilateurs (Apple Silicon : clés F{n}Ac/Mn/Mx/Tg/Md + Ftst).
 
+use crate::i18n::tr;
 use crate::smc::{Smc, SmcError};
 use serde::Serialize;
 use std::thread::sleep;
@@ -47,7 +48,7 @@ pub fn read_with(smc: &Smc, limits: &[(f64, f64)]) -> Vec<Fan> {
             let percent = if max > min { ((rpm - min) / (max - min) * 100.0).clamp(0.0, 100.0) } else { 0.0 };
             Some(Fan {
                 id: i,
-                name: format!("Ventilateur {}", i + 1),
+                name: tr!("Ventilateur {}", "Fan {}", i + 1),
                 rpm: rpm.round(),
                 min: min.round(),
                 max: max.round(),
@@ -76,7 +77,7 @@ pub fn set_rpm(smc: &Smc, id: usize, rpm: f64) -> Result<(), SmcError> {
                 break;
             }
             if last.is_ok() {
-                last = Err(SmcError::Unsupported("macOS a refusé le mode forcé".into()));
+                last = Err(SmcError::Unsupported(tr!("macOS a refusé le mode forcé", "macOS refused forced mode")));
             }
             sleep(Duration::from_millis(125));
         }

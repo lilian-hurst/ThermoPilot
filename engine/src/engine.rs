@@ -4,6 +4,7 @@ use crate::battery::{self, BatteryInfo};
 use crate::battery_advice::{self, Tip};
 use crate::charge::{ChargeConfig, ChargeStatus, Limiter};
 use crate::control::{self, Advice, Mode, SAFETY_OFF, SAFETY_ON};
+use crate::i18n::tr;
 use crate::energy::{EnergyTracker, ProcEnergy};
 use crate::usage::Recorder;
 use crate::fans::{self, Fan};
@@ -176,6 +177,8 @@ pub struct Engine {
     last_tick: Option<Instant>,
     /// CLI (status, battery…) : toujours tout lire
     pub always_full: bool,
+    /// Lecture complète des capteurs au tick précédent (la tendance n'est pas comparable entre lectures partielle/complète)
+    last_full: bool,
     ticks: u64,
     power_ema: Option<f64>,
     map: SensorMap,
@@ -213,6 +216,7 @@ impl Engine {
             fan_limits,
             last_tick: None,
             always_full: false,
+            last_full: false,
             ticks: 0,
             power_ema: None,
             map,
@@ -231,7 +235,12 @@ impl Engine {
     fn trend(&self) -> f64 {
         // Régression linéaire sur les ~30 dernières secondes -> °C/min
         let n = self.history.len();
-        if n < 5 {
+        let span = match (self.history.front(), self.history.back()) {
+            (Some(a), Some(b)) => b.0.duration_since(a.0).as_secs_f64(),
+            _ => 0.0,
+        };
+        // Au moins 5 points sur 10 s, sinon la pente n'a pas de sens
+        if n < 5 || span < 10.0 {
             return 0.0;
         }
         let t0 = self.history[0].0;
@@ -279,6 +288,11 @@ impl Engine {
             .map(|g| g.max)
             .fold(0.0, f64::max);
 
+        if full != self.last_full {
+            self.history.clear();
+            self.smoothed = None;
+            self.last_full = full;
+        }
         self.history.push_back((now, hotspot));
         while self.history.front().map_or(false, |(t, _)| now.duration_since(*t) > Duration::from_secs(30)) {
             self.history.pop_front();
@@ -428,7 +442,7 @@ impl Engine {
             if self.applied_manual {
                 match fans::restore_auto(&self.smc) {
                     Ok(()) => self.last_error = None,
-                    Err(e) => self.last_error = Some(format!("Retour en Auto : {e}")),
+                    Err(e) => self.last_error = Some(tr!("Retour en Auto : {e}", "Back to Auto: {e}")),
                 }
                 self.applied_manual = false;
                 self.commanded.clear();
@@ -541,7 +555,7 @@ fn detect_conflicts() -> Vec<String> {
     }
     let mut v = vec![];
     if battery_script {
-        v.push("Le script « battery » (maintain)".to_string());
+        v.push(tr!("Le script « battery » (maintain)", "The \"battery\" script (maintain)"));
     }
     if aldente {
         v.push("AlDente".to_string());

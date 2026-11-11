@@ -190,8 +190,8 @@ enum CurvePreset: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var label: String {
         switch self {
-        case .silent: "Silencieux"
-        case .balanced: "Équilibré"
+        case .silent: tr("Silencieux", "Silent")
+        case .balanced: tr("Équilibré", "Balanced")
         case .performance: "Performance"
         }
     }
@@ -365,7 +365,7 @@ extension Fmt {
     }
     static func dateTime(_ t: Double) -> String {
         let f = DateFormatter()
-        f.locale = Locale(identifier: "fr_FR")
+        f.locale = Locale(identifier: Lang.english ? "en_US" : "fr_FR")
         f.dateFormat = "EEE d, HH:mm"
         return f.string(from: Date(timeIntervalSince1970: t))
     }
@@ -375,3 +375,32 @@ extension Fmt {
         return f.string(from: Date(timeIntervalSince1970: t))
     }
 }
+
+// MARK: - Langue de l'interface
+
+/// Langue choisie : "system" (par défaut), "fr" ou "en". Stockée dans les préférences.
+enum Lang {
+    static let key = "appLanguage"
+    static let choices: [(id: String, label: String)] = [("system", "Système / System"), ("fr", "Français"), ("en", "English")]
+
+    /// Langue effective (résout « système » avec la langue préférée de macOS)
+    static private(set) var english: Bool = resolve(UserDefaults.standard.string(forKey: key) ?? "system")
+
+    static var code: String { english ? "en" : "fr" }
+
+    static func resolve(_ choice: String) -> Bool {
+        switch choice {
+        case "en": return true
+        case "fr": return false
+        default: return !(Locale.preferredLanguages.first ?? "en").hasPrefix("fr")
+        }
+    }
+
+    static func set(_ choice: String) {
+        UserDefaults.standard.set(choice, forKey: key)
+        english = resolve(choice)
+    }
+}
+
+/// Texte de l'interface dans la langue choisie.
+func tr(_ fr: String, _ en: String) -> String { Lang.english ? en : fr }

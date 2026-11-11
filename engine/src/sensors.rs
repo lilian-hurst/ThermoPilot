@@ -107,7 +107,7 @@ impl SensorMap {
             .filter(|(_, vals)| !vals.is_empty())
             .map(|((id, name, _, warn, crit), vals)| Group {
                 id,
-                name,
+                name: if crate::i18n::en() { name_en(id) } else { name },
                 avg: round1(vals.iter().sum::<f64>() / vals.len() as f64),
                 max: round1(vals.iter().cloned().fold(f64::MIN, f64::max)),
                 count: vals.len(),
@@ -116,6 +116,21 @@ impl SensorMap {
             })
             .collect();
         (sensors, groups)
+    }
+}
+
+fn name_en(id: &str) -> &'static str {
+    match id {
+        "cpu_p" => "CPU · performance cores",
+        "cpu_e" => "CPU · efficiency cores",
+        "gpu" => "GPU",
+        "soc" => "SoC (die)",
+        "ssd" => "SSD (NAND)",
+        "battery" => "Battery",
+        "wifi" => "Wi-Fi",
+        "palm" => "Palm rest",
+        "air" => "Airflow",
+        _ => "Sensor",
     }
 }
 

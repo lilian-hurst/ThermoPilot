@@ -10,8 +10,8 @@ struct BatteryView: View {
             VStack(alignment: .leading, spacing: 16) {
                 HeaderView()
                 Picker("", selection: $page) {
-                    Text("Vue d'ensemble").tag(0)
-                    Text("Utilisation & diagnostic").tag(1)
+                    Text(tr("Vue d'ensemble", "Overview")).tag(0)
+                    Text(tr("Utilisation & diagnostic", "Usage & diagnostics")).tag(1)
                 }
                 .pickerStyle(.segmented).labelsHidden().frame(maxWidth: 380)
                 if page == 1 {
@@ -35,7 +35,7 @@ struct BatteryView: View {
                         BatteryHistory(history: client.history).frame(maxWidth: .infinity)
                     }
                 } else if client.snapshot != nil {
-                    Text("Aucune batterie détectée.").foregroundStyle(.secondary)
+                    Text(tr("Aucune batterie détectée.", "No battery detected.")).foregroundStyle(.secondary)
                 } else {
                     ConnectingView()
                 }
@@ -74,11 +74,11 @@ struct ChargeRing: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(charge.state).font(.headline)
                 if let m = b.minutesRemaining {
-                    Label(b.isCharging ? "Pleine charge dans \(Fmt.minutes(m))" : "Autonomie \(Fmt.minutes(m))", systemImage: "clock")
+                    Label(b.isCharging ? tr("Pleine charge dans \(Fmt.minutes(m))", "Full in \(Fmt.minutes(m))") : tr("Autonomie \(Fmt.minutes(m))", "\(Fmt.minutes(m)) remaining"), systemImage: "clock")
                         .font(.callout).foregroundStyle(.secondary)
                 }
                 if charge.config.enabled {
-                    Label("Limite \(charge.config.limit) %", systemImage: "gauge.with.dots.needle.67percent").font(.caption).foregroundStyle(.secondary)
+                    Label(tr("Limite \(charge.config.limit) %", "Limit \(charge.config.limit) %"), systemImage: "gauge.with.dots.needle.67percent").font(.caption).foregroundStyle(.secondary)
                 }
             }
             Spacer(minLength: 0)
@@ -94,20 +94,20 @@ struct PowerCard: View {
     let battery: BatteryInfo
     var body: some View {
         let b = battery
-        Card(title: "Énergie", icon: "bolt") {
+        Card(title: tr("Énergie", "Power"), icon: "bolt") {
             Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 6) {
                 GridRow {
-                    Text("Batterie").foregroundStyle(.secondary)
-                    Text(b.powerW == 0 ? "au repos" : String(format: "%@%.1f W", b.powerW > 0 ? "+" : "", b.powerW))
+                    Text(tr("Batterie", "Battery")).foregroundStyle(.secondary)
+                    Text(b.powerW == 0 ? tr("au repos", "idle") : String(format: "%@%.1f W", b.powerW > 0 ? "+" : "", b.powerW))
                         .bold().monospacedDigit().foregroundStyle(b.powerW < -20 ? .orange : .primary)
                 }
                 if let w = b.systemPowerInW {
-                    GridRow { Text("Système (secteur)").foregroundStyle(.secondary); Text(String(format: "%.1f W", w)).bold().monospacedDigit() }
+                    GridRow { Text(tr("Système (secteur)", "System (AC)")).foregroundStyle(.secondary); Text(String(format: "%.1f W", w)).bold().monospacedDigit() }
                 }
                 if let a = b.adapterWatts {
-                    GridRow { Text("Adaptateur").foregroundStyle(.secondary); Text("\(Int(a)) W \(b.adapterName ?? "")").monospacedDigit() }
+                    GridRow { Text(tr("Adaptateur", "Adapter")).foregroundStyle(.secondary); Text("\(Int(a)) W \(b.adapterName ?? "")").monospacedDigit() }
                 }
-                GridRow { Text("Tension / courant").foregroundStyle(.secondary); Text(String(format: "%.2f V · %.2f A", b.voltageV, b.amperageA)).monospacedDigit() }
+                GridRow { Text(tr("Tension / courant", "Voltage / current")).foregroundStyle(.secondary); Text(String(format: "%.2f V · %.2f A", b.voltageV, b.amperageA)).monospacedDigit() }
             }
             .font(.callout)
         }
@@ -120,15 +120,15 @@ struct HealthCard: View {
         let b = battery
         let hColor: Color = b.healthPct >= 90 ? .green : b.healthPct >= 80 ? .yellow : .red
         let tColor: Color = b.temperatureC >= 40 ? .red : b.temperatureC >= 35 ? .orange : .green
-        Card(title: "Santé", icon: "heart.text.square") {
+        Card(title: tr("Santé", "Health"), icon: "heart.text.square") {
             HStack(alignment: .firstTextBaseline) {
                 Text(String(format: "%.0f %%", b.healthPct)).font(.title.bold()).foregroundStyle(hColor)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("\(Int(b.nominalMah ?? b.maxMah)) / \(Int(b.designMah)) mAh").font(.caption).foregroundStyle(.secondary)
                     if let raw = b.rawHealthPct {
-                        Text(String(format: "jauge brute : %.1f %% (%d mAh)", raw, Int(b.maxMah)))
+                        Text(String(format: tr("jauge brute : %.1f %% (%d mAh)", "raw gauge: %.1f %% (%d mAh)"), raw, Int(b.maxMah)))
                             .font(.caption2).foregroundStyle(.tertiary)
-                            .help("Réglages macOS affiche la capacité nominale (lissée). La valeur brute est la mesure instantanée de la jauge, plus pessimiste et plus variable.")
+                            .help(tr("Réglages macOS affiche la capacité nominale (lissée). La valeur brute est la mesure instantanée de la jauge, plus pessimiste et plus variable.", "macOS Settings shows the nominal (smoothed) capacity. The raw value is the gauge's instantaneous reading, more pessimistic and more variable."))
                     }
                 }
                 Spacer()
@@ -137,7 +137,7 @@ struct HealthCard: View {
             VStack(alignment: .leading, spacing: 3) {
                 ProgressView(value: Double(min(b.cycles, b.designCycles)), total: Double(b.designCycles))
                     .tint(Double(b.cycles) / Double(max(b.designCycles, 1)) > 0.8 ? .orange : .accentColor)
-                Text("\(b.cycles) cycles sur \(b.designCycles) prévus").font(.caption).foregroundStyle(.secondary)
+                Text(tr("\(b.cycles) cycles sur \(b.designCycles) prévus", "\(b.cycles) of \(b.designCycles) rated cycles")).font(.caption).foregroundStyle(.secondary)
             }
         }
     }
@@ -148,13 +148,13 @@ struct HealthCard: View {
 struct TipsCard: View {
     @Environment(EngineClient.self) private var client
     let tips: [Tip]
-    var title = "Conseils autonomie & durée de vie"
+    var title = tr("Conseils autonomie & durée de vie", "Battery life & lifespan tips")
     @State private var confirmQuit: Tip?
 
     var body: some View {
         Card(title: title, icon: "wand.and.stars") {
             if tips.isEmpty {
-                Text("Rien à signaler.").foregroundStyle(.secondary)
+                Text(tr("Rien à signaler.", "Nothing to report.")).foregroundStyle(.secondary)
             }
             ForEach(Array(tips.enumerated()), id: \.offset) { _, t in
                 HStack(alignment: .top, spacing: 12) {
@@ -175,14 +175,14 @@ struct TipsCard: View {
                 .background(t.color.opacity(0.08), in: RoundedRectangle(cornerRadius: 10))
             }
         }
-        .confirmationDialog(confirmQuit.map { "Quitter « \($0.action?.split(separator: ":", maxSplits: 2).last.map(String.init) ?? "") » ?" } ?? "",
+        .confirmationDialog(confirmQuit.map { t in let n = t.action?.split(separator: ":", maxSplits: 2).last.map(String.init) ?? ""; return tr("Quitter « \(n) » ?", "Quit \"\(n)\"?") } ?? "",
                             isPresented: Binding(get: { confirmQuit != nil }, set: { if !$0 { confirmQuit = nil } })) {
-            Button("Quitter l'application", role: .destructive) {
+            Button(tr("Quitter l'application", "Quit the app"), role: .destructive) {
                 if let a = confirmQuit?.action { client.perform(a) }
                 confirmQuit = nil
             }
         } message: {
-            Text("L'application pourra vous demander d'enregistrer vos documents.")
+            Text(tr("L'application pourra vous demander d'enregistrer vos documents.", "The app may ask you to save your documents."))
         }
     }
 }
@@ -196,36 +196,36 @@ struct ChargeLimitCard: View {
 
     var body: some View {
         let c = snapshot.charge
-        Card(title: "Limiteur de charge", icon: "battery.100percent.bolt") {
-            Toggle("Limiter la charge", isOn: $cfg.enabled)
+        Card(title: tr("Limiteur de charge", "Charge limiter"), icon: "battery.100percent.bolt") {
+            Toggle(tr("Limiter la charge", "Limit charging"), isOn: $cfg.enabled)
             HStack {
                 Slider(value: Binding(get: { Double(cfg.limit) }, set: { cfg.limit = Int($0) }), in: 50...100, step: 5)
                 Text("\(cfg.limit) %").monospacedDigit().frame(width: 48, alignment: .trailing)
             }
             .disabled(!cfg.enabled)
-            Toggle("Protection thermique (pause au-delà de 35 °C)", isOn: $cfg.heatProtection)
+            Toggle(tr("Protection thermique (pause au-delà de 35 °C)", "Heat protection (pause above 35 °C)"), isOn: $cfg.heatProtection)
             if c.adapterKey != nil {
-                Toggle("Redescendre à la limite si la batterie est au-dessus", isOn: $cfg.dischargeToLimit)
+                Toggle(tr("Redescendre à la limite si la batterie est au-dessus", "Discharge down to the limit if above it"), isOn: $cfg.dischargeToLimit)
                     .disabled(!cfg.enabled)
             }
             Text(methodText(c)).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             if c.effective == false {
-                Label("Le firmware ne semble pas appliquer la commande.", systemImage: "exclamationmark.triangle.fill")
+                Label(tr("Le firmware ne semble pas appliquer la commande.", "The firmware doesn't seem to apply the command."), systemImage: "exclamationmark.triangle.fill")
                     .font(.caption).foregroundStyle(.red)
             }
             if !snapshot.conflicts.isEmpty {
-                Label("Conflit possible : \(snapshot.conflicts.joined(separator: ", "))", systemImage: "exclamationmark.triangle")
+                Label(tr("Conflit possible : ", "Possible conflict: ") + snapshot.conflicts.joined(separator: ", "), systemImage: "exclamationmark.triangle")
                     .font(.caption).foregroundStyle(.orange)
             }
             HStack {
-                Text("80 % est le meilleur compromis si le Mac reste souvent branché.").font(.caption).foregroundStyle(.secondary)
+                Text(tr("80 % est le meilleur compromis si le Mac reste souvent branché.", "80 % is the best trade-off if the Mac is often plugged in.")).font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button("Appliquer") { client.setCharge(cfg) }
+                Button(tr("Appliquer", "Apply")) { client.setCharge(cfg) }
                     .buttonStyle(.borderedProminent)
                     .disabled(!snapshot.privileged || c.method == "none" || cfg == c.config)
             }
             if !snapshot.privileged {
-                Label("Nécessite le helper root.", systemImage: "lock").font(.caption).foregroundStyle(.orange)
+                Label(tr("Nécessite le helper root.", "Requires the root helper."), systemImage: "lock").font(.caption).foregroundStyle(.orange)
             }
         }
         .onAppear { cfg = c.config }
@@ -234,9 +234,9 @@ struct ChargeLimitCard: View {
 
     private func methodText(_ c: ChargeStatus) -> String {
         switch c.method {
-        case "inhibit": "Méthode : pause de charge via la clé SMC \(c.inhibitKey ?? "")."
-        case "sailing": "Méthode « navigation » : ce firmware n'a pas de clé de pause, l'adaptateur (\(c.adapterKey ?? "")) est coupé à la limite puis réactivé 5 points plus bas. Réactivé automatiquement avant la veille."
-        default: "Ce firmware n'expose aucune clé de contrôle de charge. Utilisez la « Recharge optimisée » de macOS."
+        case "inhibit": tr("Méthode : pause de charge via la clé SMC \(c.inhibitKey ?? "").", "Method: charge pause via SMC key \(c.inhibitKey ?? "").")
+        case "sailing": tr("Méthode « navigation » : ce firmware n'a pas de clé de pause, l'adaptateur (\(c.adapterKey ?? "")) est coupé à la limite puis réactivé 5 points plus bas. Réactivé automatiquement avant la veille.", "\"Sailing\" method: this firmware has no pause key, so the adapter (\(c.adapterKey ?? "")) is cut at the limit and re-enabled 5 points lower. Automatically re-enabled before sleep.")
+        default: tr("Ce firmware n'expose aucune clé de contrôle de charge. Utilisez la « Recharge optimisée » de macOS.", "This firmware exposes no charge-control key. Use macOS \"Optimized Battery Charging\".")
         }
     }
 }
@@ -248,34 +248,34 @@ struct PowerSettingsCard: View {
     let snapshot: Snapshot
 
     var body: some View {
-        Card(title: "Réglages d'alimentation macOS", icon: "gearshape.2") {
+        Card(title: tr("Réglages d'alimentation macOS", "macOS power settings"), icon: "gearshape.2") {
             if let p = snapshot.powerSettings {
                 Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 8) {
                     GridRow {
                         Text("").gridColumnAlignment(.leading)
-                        Text("Sur batterie").font(.caption.bold()).foregroundStyle(.secondary)
-                        Text("Sur secteur").font(.caption.bold()).foregroundStyle(.secondary)
+                        Text(tr("Sur batterie", "On battery")).font(.caption.bold()).foregroundStyle(.secondary)
+                        Text(tr("Sur secteur", "On AC")).font(.caption.bold()).foregroundStyle(.secondary)
                     }
                     if p.battery["powermode"] != nil {
                         GridRow {
-                            Text("Mode d'énergie")
+                            Text(tr("Mode d'énergie", "Energy mode"))
                             modePicker("battery", p.battery["powermode"] ?? 0)
                             modePicker("ac", p.ac["powermode"] ?? 0)
                         }
                     } else if p.battery["lowpowermode"] != nil {
                         GridRow {
-                            Text("Économie d'énergie")
+                            Text(tr("Économie d'énergie", "Low Power mode"))
                             toggle("battery", "lowpowermode", p.battery)
                             toggle("ac", "lowpowermode", p.ac)
                         }
                     }
                     GridRow {
-                        Text("Extinction écran")
+                        Text(tr("Extinction écran", "Display off after"))
                         minutesPicker("battery", "displaysleep", p.battery["displaysleep"] ?? 0, [2, 5, 10, 15, 30])
                         minutesPicker("ac", "displaysleep", p.ac["displaysleep"] ?? 0, [5, 10, 15, 30, 60])
                     }
                     GridRow {
-                        Text("Mise en veille")
+                        Text(tr("Mise en veille", "Sleep after"))
                         minutesPicker("battery", "sleep", p.battery["sleep"] ?? 0, [1, 5, 10, 15, 30])
                         minutesPicker("ac", "sleep", p.ac["sleep"] ?? 0, [10, 30, 60, 120])
                     }
@@ -290,26 +290,26 @@ struct PowerSettingsCard: View {
                 HStack {
                     Button {
                         client.powerPreset("battery_saver")
-                    } label: { Label("Optimiser l'autonomie", systemImage: "leaf.fill") }
+                    } label: { Label(tr("Optimiser l'autonomie", "Optimize battery life"), systemImage: "leaf.fill") }
                         .buttonStyle(.borderedProminent).tint(.green)
                     if snapshot.pmsetBackup != nil {
-                        Button("Restaurer mes réglages") { client.powerPreset("restore") }
+                        Button(tr("Restaurer mes réglages", "Restore my settings")) { client.powerPreset("restore") }
                     }
                 }
                 .disabled(!snapshot.privileged)
-                Text("Profil batterie : économie d'énergie, écran éteint après 5 min, veille après 15 min, Power Nap coupé, luminosité réduite. Vos réglages actuels sont sauvegardés.")
+                Text(tr("Profil batterie : économie d'énergie, écran éteint après 5 min, veille après 15 min, Power Nap coupé, luminosité réduite. Vos réglages actuels sont sauvegardés.", "Battery profile: Low Power mode, display off after 5 min, sleep after 15 min, Power Nap off, slightly dimmed display. Your current settings are saved."))
                     .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("Lecture des réglages pmset…").foregroundStyle(.secondary)
+                Text(tr("Lecture des réglages pmset…", "Reading pmset settings…")).foregroundStyle(.secondary)
             }
         }
     }
 
     private func modePicker(_ profile: String, _ value: Int) -> some View {
         Picker("", selection: Binding(get: { value }, set: { client.setPmset(profile, "powermode", $0) })) {
-            Text("Automatique").tag(0)
-            Text("Économie").tag(1)
-            Text("Haute perf.").tag(2)
+            Text(tr("Automatique", "Automatic")).tag(0)
+            Text(tr("Économie", "Low Power")).tag(1)
+            Text(tr("Haute perf.", "High Power")).tag(2)
         }
         .labelsHidden().fixedSize()
     }
@@ -321,7 +321,7 @@ struct PowerSettingsCard: View {
         let binding = Binding<Int>(get: { value }, set: { client.setPmset(profile, key, $0) })
         return Picker("", selection: binding) {
             ForEach(all, id: \.self) { (m: Int) in
-                Text(m == 0 ? "Jamais" : "\(m) min").tag(m)
+                Text(m == 0 ? tr("Jamais", "Never") : "\(m) min").tag(m)
             }
         }
         .labelsHidden().fixedSize()
@@ -341,9 +341,9 @@ struct ConsumersCard: View {
     let onBattery: Bool
 
     var body: some View {
-        Card(title: "Plus gros consommateurs", icon: "chart.bar.xaxis") {
+        Card(title: tr("Plus gros consommateurs", "Top consumers"), icon: "chart.bar.xaxis") {
             if processes.isEmpty {
-                Text("Mesure en cours…").foregroundStyle(.secondary)
+                Text(tr("Mesure en cours…", "Measuring…")).foregroundStyle(.secondary)
             }
             let maxW = max(processes.map(\.watts).max() ?? 1, 0.5)
             ForEach(processes.prefix(8)) { p in
@@ -365,7 +365,7 @@ struct ConsumersCard: View {
                 }
                 .font(.callout)
             }
-            Text("Énergie mesurée par macOS (CPU + GPU attribués à chaque processus). Les processus d'autres utilisateurs ne sont visibles qu'avec le helper root.")
+            Text(tr("Énergie mesurée par macOS (CPU + GPU attribués à chaque processus). Les processus d'autres utilisateurs ne sont visibles qu'avec le helper root.", "Energy measured by macOS (CPU + GPU attributed to each process). Other users' processes are only visible with the root helper."))
                 .font(.caption2).foregroundStyle(.secondary)
         }
     }
@@ -379,14 +379,14 @@ struct BatteryHistory: View {
         return stride(from: 0, to: allHistory.count, by: step).map { allHistory[$0] }
     }
     var body: some View {
-        Card(title: "Historique batterie (10 min)", icon: "chart.line.uptrend.xyaxis") {
+        Card(title: tr("Historique batterie (10 min)", "Battery history (10 min)"), icon: "chart.line.uptrend.xyaxis") {
             Chart(history) { p in
                 if let pct = p.batteryPct {
                     LineMark(x: .value("t", p.date), y: .value("Charge", pct)).foregroundStyle(.green)
                 }
             }
             .chartYScale(domain: 0...100)
-            .chartYAxisLabel("Charge %")
+            .chartYAxisLabel(tr("Charge %", "Charge %"))
             .frame(height: 80)
             Chart(history) { p in
                 if let w = p.batteryPowerW {
@@ -395,7 +395,7 @@ struct BatteryHistory: View {
                     LineMark(x: .value("t", p.date), y: .value("W", w)).foregroundStyle(.orange)
                 }
             }
-            .chartYAxisLabel("W (+ charge / − décharge)")
+            .chartYAxisLabel(tr("W (+ charge / − décharge)", "W (+ charging / − discharging)"))
             .frame(height: 80)
         }
     }

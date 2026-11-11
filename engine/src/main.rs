@@ -6,6 +6,7 @@ mod energy;
 mod power;
 mod engine;
 mod fans;
+mod i18n;
 mod sensors;
 mod server;
 mod smc;
@@ -30,6 +31,7 @@ extern "C" fn on_signal(_: libc::c_int) {
 }
 
 fn main() {
+    i18n::init_from_env();
     let args: Vec<String> = std::env::args().skip(1).collect();
     let arg = |name: &str| args.iter().position(|a| a == name).and_then(|i| args.get(i + 1)).cloned();
     let smc = match smc::Smc::open() {

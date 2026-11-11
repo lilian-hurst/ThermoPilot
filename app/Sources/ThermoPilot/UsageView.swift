@@ -15,7 +15,7 @@ struct UsageView: View {
                 HStack(alignment: .top, spacing: 12) {
                     ForEach(r.checks) { CheckCard(check: $0) }
                 }
-                TipsCard(tips: r.tips, title: "Que faire ?")
+                TipsCard(tips: r.tips, title: tr("Que faire ?", "What to do?"))
                 LevelTimeline(points: r.timeline)
                 HStack(alignment: .top, spacing: 16) {
                     AppsCard(report: r).frame(maxWidth: .infinity)
@@ -27,7 +27,7 @@ struct UsageView: View {
                 }
                 SourcesFooter(report: r)
             } else if client.usageError == nil {
-                HStack { ProgressView().controlSize(.small); Text("Analyse du journal d'alimentation…").foregroundStyle(.secondary) }
+                HStack { ProgressView().controlSize(.small); Text(tr("Analyse du journal d'alimentation…", "Analyzing the power log…")).foregroundStyle(.secondary) }
             }
         }
         .task {
@@ -96,20 +96,20 @@ struct LevelTimeline: View {
         let from = Date().addingTimeInterval(range == 0 ? -86400 : -7 * 86400)
         let pts = points.filter { Date(timeIntervalSince1970: $0.t) >= from }
         let bands = makeBands(pts)
-        Card(title: "Niveau de charge", icon: "chart.xyaxis.line") {
+        Card(title: tr("Niveau de charge", "Charge level"), icon: "chart.xyaxis.line") {
             HStack {
                 Picker("", selection: $range) {
                     Text("24 h").tag(0)
-                    Text("7 jours").tag(1)
+                    Text(tr("7 jours", "7 days")).tag(1)
                 }
                 .pickerStyle(.segmented).labelsHidden().frame(width: 160)
                 Spacer()
-                LegendDot(color: .green, text: "Branché")
-                LegendDot(color: .indigo, text: "En veille")
-                LegendDot(color: .orange, text: "Sur batterie, éveillé")
+                LegendDot(color: .green, text: tr("Branché", "Plugged in"))
+                LegendDot(color: .indigo, text: tr("En veille", "Asleep"))
+                LegendDot(color: .orange, text: tr("Sur batterie, éveillé", "On battery, awake"))
             }
             if pts.count < 2 {
-                Text("Pas encore de données sur cette période.").foregroundStyle(.secondary).frame(height: 180)
+                Text(tr("Pas encore de données sur cette période.", "No data for this period yet.")).foregroundStyle(.secondary).frame(height: 180)
             } else {
                 Chart {
                     ForEach(bands) { b in
@@ -172,28 +172,28 @@ struct AppsCard: View {
         let other = range == 0 ? report.other24HWh : report.other7DWh
         let hours = range == 0 ? report.batteryHours24H : report.batteryHours7D
         let denom = max(total, apps.reduce(0) { $0 + $1.wh }, 0.01)
-        Card(title: "Apps qui vident la batterie", icon: "app.badge") {
+        Card(title: tr("Apps qui vident la batterie", "Apps draining the battery"), icon: "app.badge") {
             HStack {
                 Picker("", selection: $range) {
                     Text("24 h").tag(0)
-                    Text("7 jours").tag(1)
+                    Text(tr("7 jours", "7 days")).tag(1)
                 }
                 .pickerStyle(.segmented).labelsHidden().frame(width: 160)
                 Spacer()
                 if total > 0 {
-                    Text(String(format: "%.1f Wh sur %@ de batterie", total, Fmt.hours(hours))).font(.caption).foregroundStyle(.secondary)
+                    Text(String(format: tr("%.1f Wh sur %@ de batterie", "%.1f Wh over %@ on battery"), total, Fmt.hours(hours))).font(.caption).foregroundStyle(.secondary)
                 }
             }
             if apps.isEmpty {
-                Text("Aucune mesure pour l'instant. ThermoPilot enregistre la consommation de chaque app quand le Mac fonctionne sur batterie, même app fermée (helper root).")
+                Text(tr("Aucune mesure pour l'instant. ThermoPilot enregistre la consommation de chaque app quand le Mac fonctionne sur batterie, même app fermée (helper root).", "No measurements yet. ThermoPilot records each app's energy while the Mac runs on battery, even with the app closed (root helper)."))
                     .font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             } else {
                 ForEach(apps.prefix(10)) { a in
-                    AppRow(name: a.name, wh: a.wh, share: a.sharePct, detail: String(format: "%.2f W moy. · %.0f min CPU", a.avgW, a.cpuMin), color: a.sharePct >= 35 ? .red : a.sharePct >= 12 ? .orange : .blue)
+                    AppRow(name: a.name, wh: a.wh, share: a.sharePct, detail: String(format: tr("%.2f W moy. · %.0f min CPU", "%.2f W avg · %.0f CPU min"), a.avgW, a.cpuMin), color: a.sharePct >= 35 ? .red : a.sharePct >= 12 ? .orange : .blue)
                 }
                 if other > 0.05 {
                     Divider()
-                    AppRow(name: "Écran, Wi-Fi et reste du système", wh: other, share: other / denom * 100, detail: "non attribuable à une app", color: .gray)
+                    AppRow(name: tr("Écran, Wi-Fi et reste du système", "Display, Wi-Fi and rest of the system"), wh: other, share: other / denom * 100, detail: tr("non attribuable à une app", "not attributable to an app"), color: .gray)
                 }
             }
         }
@@ -231,17 +231,17 @@ struct AppRow: View {
 struct DaysCard: View {
     let days: [DaySummary]
     var body: some View {
-        Card(title: "Utilisation par jour", icon: "calendar") {
+        Card(title: tr("Utilisation par jour", "Usage per day"), icon: "calendar") {
             if days.isEmpty {
-                Text("Journal d'alimentation vide.").foregroundStyle(.secondary)
+                Text(tr("Journal d'alimentation vide.", "Power log is empty.")).foregroundStyle(.secondary)
             } else {
                 Grid(alignment: .trailing, horizontalSpacing: 12, verticalSpacing: 8) {
                     GridRow {
-                        Text("Jour").gridColumnAlignment(.leading)
-                        Text("Éveillé (batt.)")
-                        Text("Veille (batt.)")
-                        Text("Branché")
-                        Text("Réveils")
+                        Text(tr("Jour", "Day")).gridColumnAlignment(.leading)
+                        Text(tr("Éveillé (batt.)", "Awake (batt.)"))
+                        Text(tr("Veille (batt.)", "Asleep (batt.)"))
+                        Text(tr("Branché", "Plugged in"))
+                        Text(tr("Réveils", "Wake-ups"))
                     }
                     .font(.caption.bold()).foregroundStyle(.secondary)
                     ForEach(days) { d in
@@ -255,7 +255,7 @@ struct DaysCard: View {
                         .font(.callout)
                     }
                 }
-                Text("Le rythme (%/h) est coloré : vert = normal, orange = élevé, rouge = anormal.").font(.caption2).foregroundStyle(.secondary)
+                Text(tr("Le rythme (%/h) est coloré : vert = normal, orange = élevé, rouge = anormal.", "The rate (%/h) is color-coded: green = normal, orange = high, red = abnormal.")).font(.caption2).foregroundStyle(.secondary)
             }
         }
     }
@@ -282,21 +282,21 @@ struct DaysCard: View {
 struct SessionsCard: View {
     let sessions: [UsageSession]
     var body: some View {
-        Card(title: "Sessions sur batterie", icon: "battery.50percent") {
+        Card(title: tr("Sessions sur batterie", "Battery sessions"), icon: "battery.50percent") {
             if sessions.isEmpty {
-                Text("Aucune session sur batterie ces 7 derniers jours.").foregroundStyle(.secondary)
+                Text(tr("Aucune session sur batterie ces 7 derniers jours.", "No battery sessions in the last 7 days.")).foregroundStyle(.secondary)
             }
             ForEach(sessions.prefix(8)) { s in
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("\(Fmt.dateTime(s.start)) → \(s.ongoing ? "maintenant" : Fmt.time(s.end))").font(.callout.weight(.medium))
-                        Text("\(Fmt.hours(s.awakeH)) éveillé · \(Fmt.hours(s.sleepH)) en veille").font(.caption).foregroundStyle(.secondary)
+                        Text("\(Fmt.dateTime(s.start)) → \(s.ongoing ? tr("maintenant", "now") : Fmt.time(s.end))").font(.callout.weight(.medium))
+                        Text(tr("\(Fmt.hours(s.awakeH)) éveillé · \(Fmt.hours(s.sleepH)) en veille", "\(Fmt.hours(s.awakeH)) awake · \(Fmt.hours(s.sleepH)) asleep")).font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
                         Text("\(Int(s.pctStart)) % → \(Int(s.pctEnd)) %").font(.callout.monospacedDigit())
                         if let r = s.awakePctPerH {
-                            Text(String(format: "%.1f %%/h éveillé", r)).font(.caption.monospacedDigit())
+                            Text(String(format: tr("%.1f %%/h éveillé", "%.1f %%/h awake"), r)).font(.caption.monospacedDigit())
                                 .foregroundStyle(r <= 8 ? .green : r <= 15 ? .orange : .red)
                         }
                     }
@@ -313,17 +313,17 @@ struct SleepCard: View {
     let sleeps: [SleepSession]
     let reasons: [WakeReason]
     var body: some View {
-        Card(title: "Veille : la batterie se vide-t-elle ?", icon: "moon.zzz") {
+        Card(title: tr("Veille : la batterie se vide-t-elle ?", "Sleep: is the battery draining?"), icon: "moon.zzz") {
             let list = sleeps.filter(\.onBattery).prefix(6)
             if list.isEmpty {
-                Text("Aucune veille sur batterie récente.").foregroundStyle(.secondary)
+                Text(tr("Aucune veille sur batterie récente.", "No recent sleep on battery.")).foregroundStyle(.secondary)
             }
             ForEach(Array(list)) { s in
                 HStack(alignment: .top) {
                     Circle().fill(color(s.level)).frame(width: 8, height: 8).padding(.top, 5)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(Fmt.dateTime(s.start)) · \(Fmt.hours(s.hours))").font(.callout.weight(.medium))
-                        Text("\(s.darkwakes) réveils\(s.mainReason.map { " · surtout : \($0)" } ?? "")").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        Text(tr("\(s.darkwakes) réveils", "\(s.darkwakes) wake-ups") + (s.mainReason.map { tr(" · surtout : ", " · mostly: ") + $0 } ?? "")).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer()
                     VStack(alignment: .trailing, spacing: 2) {
@@ -334,7 +334,7 @@ struct SleepCard: View {
             }
             if !reasons.isEmpty {
                 Divider()
-                Text("Ce qui réveille le Mac (7 jours)").font(.subheadline.bold())
+                Text(tr("Ce qui réveille le Mac (7 jours)", "What wakes the Mac (7 days)")).font(.subheadline.bold())
                 let maxC = Double(reasons.map(\.count).max() ?? 1)
                 ForEach(reasons.prefix(5)) { r in
                     HStack {
@@ -346,7 +346,7 @@ struct SleepCard: View {
                         Text("\(r.count)").font(.caption.monospacedDigit()).frame(width: 36, alignment: .trailing)
                     }
                 }
-                Text("Ces réveils en arrière-plan sont normaux (quelques secondes chacun) tant que la vidange reste ≤ 0,5 %/h.")
+                Text(tr("Ces réveils en arrière-plan sont normaux (quelques secondes chacun) tant que la vidange reste ≤ 0,5 %/h.", "These background wake-ups are normal (a few seconds each) as long as the drain stays ≤ 0.5 %/h."))
                     .font(.caption2).foregroundStyle(.secondary)
             }
         }
@@ -369,12 +369,12 @@ struct SourcesFooter: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             if let l = report.logSince {
-                Text("Historique veille / charge : journal d'alimentation macOS depuis \(Fmt.dateTime(l)).")
+                Text(tr("Historique veille / charge : journal d'alimentation macOS depuis \(Fmt.dateTime(l)).", "Sleep / charge history: macOS power log since \(Fmt.dateTime(l))."))
             }
             if let r = report.recordingSince {
-                Text("Consommation par app et au repos : mesurée par ThermoPilot depuis \(Fmt.dateTime(r)) (conservée 7 jours).")
+                Text(tr("Consommation par app et au repos : mesurée par ThermoPilot depuis \(Fmt.dateTime(r)) (conservée 7 jours).", "Per-app and idle power: measured by ThermoPilot since \(Fmt.dateTime(r)) (kept 7 days)."))
             } else {
-                Text("Consommation par app : mesurée par ThermoPilot à partir de maintenant (conservée 7 jours).")
+                Text(tr("Consommation par app : mesurée par ThermoPilot à partir de maintenant (conservée 7 jours).", "Per-app power: measured by ThermoPilot from now on (kept 7 days)."))
             }
         }
         .font(.caption).foregroundStyle(.secondary)

@@ -1,5 +1,6 @@
 //! Réglages d'alimentation macOS (pmset) + réveil/veille (IORegisterForSystemPower).
 
+use crate::i18n::tr;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::process::Command;
@@ -53,13 +54,13 @@ pub fn set(profile: &str, key: &str, value: i64) -> Result<(), String> {
     let flag = match profile {
         "battery" => "-b",
         "ac" => "-c",
-        _ => return Err("profil invalide".into()),
+        _ => return Err(tr!("profil invalide", "invalid profile")),
     };
     let Some(&(_, lo, hi)) = KEYS.iter().find(|(k, _, _)| *k == key) else {
-        return Err(format!("réglage non autorisé : {key}"));
+        return Err(tr!("réglage non autorisé : {key}", "setting not allowed: {key}"));
     };
     if value < lo || value > hi {
-        return Err(format!("{key} : valeur hors bornes ({lo}-{hi})"));
+        return Err(tr!("{key} : valeur hors bornes ({lo}-{hi})", "{key}: value out of range ({lo}-{hi})"));
     }
     let out = Command::new("/usr/bin/pmset").args([flag, key, &value.to_string()]).output().map_err(|e| e.to_string())?;
     if out.status.success() {

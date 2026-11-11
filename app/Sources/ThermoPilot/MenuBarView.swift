@@ -23,7 +23,7 @@ struct MenuBarView: View {
                     }
                     if let b = s.battery {
                         GridRow {
-                            Text("Batterie").font(.caption)
+                            Text(tr("Batterie", "Battery")).font(.caption)
                             Text("\(Int(b.percent)) % · \(s.charge.state)").font(.caption.bold()).lineLimit(1)
                         }
                     }
@@ -38,31 +38,32 @@ struct MenuBarView: View {
                 if s.privileged {
                     HStack {
                         Button("Auto") { client.setMode(.auto) }
-                        Button("Équilibré") { client.setMode(.curve(.balanced)) }
+                        Button(tr("Équilibré", "Balanced")) { client.setMode(.curve(.balanced)) }
                         Button("Perf.") { client.setMode(.curve(.performance)) }
                         Button("Max") { client.setMode(.manual(100)) }
                     }
                     .controlSize(.small)
                     if s.advice.action != "none" {
-                        Button("Appliquer le conseil (\(Int(s.advice.suggestedPercent)) %)") {
+                        Button(tr("Appliquer le conseil (\(Int(s.advice.suggestedPercent)) %)", "Apply advice (\(Int(s.advice.suggestedPercent)) %)")) {
                             client.setMode(s.advice.action == "decrease" ? .curve(.balanced) : .manual(s.advice.suggestedPercent))
                         }
                         .buttonStyle(.borderedProminent).tint(Thermal.levelColor(s.advice.level))
                     }
                 } else {
-                    Text("Lecture seule — installez le helper pour piloter les ventilateurs.").font(.caption).foregroundStyle(.orange)
+                    Text(tr("Lecture seule — installez le helper pour piloter les ventilateurs.", "Read-only — install the helper to control the fans.")).font(.caption).foregroundStyle(.orange)
                 }
             } else {
-                ProgressView("Connexion…")
+                ProgressView(tr("Connexion…", "Connecting…"))
             }
             Divider()
             HStack {
-                Button("Tableau de bord") {
+                Button(tr("Tableau de bord", "Dashboard")) {
                     Dock.show()
                     openWindow(id: "main")
                 }
                 Spacer()
-                Button("Quitter") { NSApp.terminate(nil) }
+                LanguageMenu()
+                Button(tr("Quitter", "Quit")) { NSApp.terminate(nil) }
             }
         }
         .padding(14)

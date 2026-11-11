@@ -1,6 +1,7 @@
 //! Accès bas niveau au SMC (System Management Controller) via IOKit.
 //! Lecture sans privilèges, écriture (contrôle des ventilateurs) nécessite root.
 
+use crate::i18n::tr;
 use std::collections::HashMap;
 use std::ffi::{c_char, c_void, CString};
 use std::sync::Mutex;
@@ -112,19 +113,19 @@ pub enum SmcError {
 impl std::fmt::Display for SmcError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SmcError::Open(c) => write!(f, "impossible d'ouvrir AppleSMC (kern 0x{:x})", c),
+            SmcError::Open(c) => write!(f, "{}", tr!("impossible d'ouvrir AppleSMC (kern 0x{:x})", "cannot open AppleSMC (kern 0x{:x})", c)),
             SmcError::Call(c) => {
                 if *c as u32 == 0xe00002c1 {
-                    write!(f, "accès refusé par le SMC (le moteur doit tourner en root)")
+                    write!(f, "{}", tr!("accès refusé par le SMC (le moteur doit tourner en root)", "access denied by the SMC (the engine must run as root)"))
                 } else {
-                    write!(f, "appel SMC échoué (kern 0x{:x})", *c as u32)
+                    write!(f, "{}", tr!("appel SMC échoué (kern 0x{:x})", "SMC call failed (kern 0x{:x})", *c as u32))
                 }
             }
             SmcError::Result(r) => match r {
-                132 => write!(f, "clé SMC introuvable"),
-                _ => write!(f, "le SMC a renvoyé le code {}", r),
+                132 => write!(f, "{}", tr!("clé SMC introuvable", "SMC key not found")),
+                _ => write!(f, "{}", tr!("le SMC a renvoyé le code {}", "the SMC returned code {}", r)),
             },
-            SmcError::Unsupported(t) => write!(f, "type SMC non supporté: {}", t),
+            SmcError::Unsupported(t) => write!(f, "{}", tr!("type SMC non supporté : {}", "unsupported SMC type: {}", t)),
         }
     }
 }

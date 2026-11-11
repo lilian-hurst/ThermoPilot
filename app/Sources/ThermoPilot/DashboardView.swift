@@ -54,15 +54,15 @@ struct ConnectingView: View {
         VStack(spacing: 12) {
             if client.state == .outdated {
                 Image(systemName: "arrow.triangle.2.circlepath.circle").font(.largeTitle).foregroundStyle(.orange)
-                Text("Le helper root installé date d'une version précédente du moteur.")
-                Button("Réinstaller le helper root…") { client.installHelper() }.buttonStyle(.borderedProminent)
+                Text(tr("Le helper root installé date d'une version précédente du moteur.", "The installed root helper is from an older version of the engine."))
+                Button(tr("Réinstaller le helper root…", "Reinstall root helper…")) { client.installHelper() }.buttonStyle(.borderedProminent)
             } else if case .failed(let msg) = client.state {
                 Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(.orange)
                 Text(msg)
-                Button("Réessayer") { client.connect() }
+                Button(tr("Réessayer", "Retry")) { client.connect() }
             } else {
                 ProgressView()
-                Text("Connexion au moteur Rust…").foregroundStyle(.secondary)
+                Text(tr("Connexion au moteur Rust…", "Connecting to the Rust engine…")).foregroundStyle(.secondary)
             }
         }
         .frame(maxWidth: .infinity, minHeight: 300)
@@ -83,12 +83,31 @@ struct HeaderView: View {
             }
             Spacer()
             if let s = client.snapshot {
-                Stat(label: "Puissance", value: s.powerW.map { String(format: "%.0f W", $0) } ?? "—")
+                Stat(label: tr("Puissance", "Power"), value: s.powerW.map { String(format: "%.0f W", $0) } ?? "—")
                 Stat(label: "CPU", value: s.cpuUsage.map { String(format: "%.0f %%", $0) } ?? "—")
                 Stat(label: "GPU", value: s.gpuUsage.map { String(format: "%.0f %%", $0) } ?? "—")
             }
+            LanguageMenu()
             ConnectionPill()
         }
+    }
+}
+
+/// Choix de la langue de l'interface (Système / Français / English).
+struct LanguageMenu: View {
+    @Environment(EngineClient.self) private var client
+    var body: some View {
+        Menu {
+            Picker(tr("Langue", "Language"), selection: Binding(get: { client.languageChoice }, set: { client.setLanguage($0) })) {
+                ForEach(Lang.choices, id: \.id) { c in Text(c.label).tag(c.id) }
+            }
+            .pickerStyle(.inline)
+        } label: {
+            Image(systemName: "globe")
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help(tr("Langue", "Language"))
     }
 }
 
@@ -108,20 +127,20 @@ struct ConnectionPill: View {
     @Environment(EngineClient.self) private var client
     var body: some View {
         let (text, color, icon): (String, Color, String) = switch client.state {
-        case .root: ("Contrôle actif", .green, "lock.open.fill")
-        case .readOnly: ("Lecture seule", .orange, "lock.fill")
-        case .connecting: ("Connexion…", .gray, "hourglass")
-        case .outdated: ("Helper obsolète", .orange, "arrow.triangle.2.circlepath")
-        case .failed: ("Hors ligne", .red, "bolt.horizontal.circle")
+        case .root: (tr("Contrôle actif", "Control active"), .green, "lock.open.fill")
+        case .readOnly: (tr("Lecture seule", "Read-only"), .orange, "lock.fill")
+        case .connecting: (tr("Connexion…", "Connecting…"), .gray, "hourglass")
+        case .outdated: (tr("Helper obsolète", "Helper outdated"), .orange, "arrow.triangle.2.circlepath")
+        case .failed: (tr("Hors ligne", "Offline"), .red, "bolt.horizontal.circle")
         }
         Menu {
             if client.helperInstalled {
-                Button("Réinstaller le helper root…") { client.installHelper() }
-                Button("Désinstaller le helper root…", role: .destructive) { client.uninstallHelper() }
+                Button(tr("Réinstaller le helper root…", "Reinstall root helper…")) { client.installHelper() }
+                Button(tr("Désinstaller le helper root…", "Uninstall root helper…"), role: .destructive) { client.uninstallHelper() }
             } else {
-                Button("Installer le helper root…") { client.installHelper() }
+                Button(tr("Installer le helper root…", "Install root helper…")) { client.installHelper() }
             }
-            Button("Reconnecter") { client.reconnect() }
+            Button(tr("Reconnecter", "Reconnect")) { client.reconnect() }
         } label: {
             Label(text, systemImage: icon)
         }
@@ -148,14 +167,14 @@ struct AdviceBanner: View {
                 HStack {
                     Text(a.title).font(.headline)
                     if snapshot.safetyOverride {
-                        Text("SÉCURITÉ : ventilateurs forcés au max").font(.caption.bold())
+                        Text(tr("SÉCURITÉ : ventilateurs forcés au max", "SAFETY: fans forced to max")).font(.caption.bold())
                             .padding(.horizontal, 6).padding(.vertical, 2)
                             .background(.red, in: Capsule()).foregroundStyle(.white)
                     }
                 }
                 Text(a.message).font(.callout).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 if a.action != "none" {
-                    Text("Conseillé : \(Int(a.suggestedPercent)) % · " + a.suggestedRpm.map { "\(Int($0)) RPM" }.joined(separator: " / "))
+                    Text(tr("Conseillé : \(Int(a.suggestedPercent)) % · ", "Recommended: \(Int(a.suggestedPercent)) % · ") + a.suggestedRpm.map { "\(Int($0)) RPM" }.joined(separator: " / "))
                         .font(.caption.monospacedDigit()).foregroundStyle(color)
                 }
             }
@@ -165,11 +184,11 @@ struct AdviceBanner: View {
                     Button {
                         client.setMode(a.action == "decrease" ? .curve(.balanced) : .manual(a.suggestedPercent))
                     } label: {
-                        Label(a.action == "decrease" ? "Passer en Équilibré" : "Appliquer \(Int(a.suggestedPercent)) %", systemImage: "wand.and.stars")
+                        Label(a.action == "decrease" ? tr("Passer en Équilibré", "Switch to Balanced") : tr("Appliquer \(Int(a.suggestedPercent)) %", "Apply \(Int(a.suggestedPercent)) %"), systemImage: "wand.and.stars")
                     }
                     .buttonStyle(.borderedProminent).tint(color)
                 } else {
-                    Button("Installer le helper pour agir") { client.installHelper() }
+                    Button(tr("Installer le helper pour agir", "Install the helper to act")) { client.installHelper() }
                         .buttonStyle(.bordered)
                 }
             }
@@ -211,7 +230,7 @@ struct TempGauge: View {
             .scaleEffect(1.5)
             .frame(width: 90, height: 90)
             Text(group.name).font(.subheadline.bold()).multilineTextAlignment(.center).lineLimit(2)
-            Text("moy. \(String(format: "%.0f", group.avg))° · \(group.count) capteurs")
+            Text(tr("moy. \(String(format: "%.0f", group.avg))° · \(group.count) capteurs", "avg \(String(format: "%.0f", group.avg))° · \(group.count) sensors"))
                 .font(.caption).foregroundStyle(.secondary)
         }
         .padding(12)
@@ -226,7 +245,7 @@ struct HotspotCard: View {
     var body: some View {
         let color = Thermal.color(snapshot.hotspot)
         VStack(spacing: 6) {
-            Text("Point chaud").font(.subheadline.bold())
+            Text(tr("Point chaud", "Hotspot")).font(.subheadline.bold())
             Text("\(Int(snapshot.hotspot.rounded())) °C").font(.system(size: 34, weight: .bold).monospacedDigit()).foregroundStyle(color)
             let t = snapshot.trendCPerMin
             Label(String(format: "%+.1f °C/min", t), systemImage: t > 1 ? "arrow.up.right" : t < -1 ? "arrow.down.right" : "arrow.right")
@@ -245,13 +264,13 @@ struct HotspotCard: View {
 struct FansPanel: View {
     let snapshot: Snapshot
     var body: some View {
-        Card(title: "Ventilateurs", icon: "fan") {
+        Card(title: tr("Ventilateurs", "Fans"), icon: "fan") {
             ForEach(snapshot.fans) { f in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
                         SpinningFan(rpm: f.rpm)
                         Text(f.name).font(.subheadline.bold())
-                        Text(f.manual ? "FORCÉ" : (f.rpm < 1 ? "ARRÊTÉ (macOS)" : "AUTO")).font(.caption2.bold())
+                        Text(f.manual ? tr("FORCÉ", "FORCED") : (f.rpm < 1 ? tr("ARRÊTÉ (macOS)", "STOPPED (macOS)") : "AUTO")).font(.caption2.bold())
                             .padding(.horizontal, 5).padding(.vertical, 1)
                             .background(f.manual ? Color.accentColor.opacity(0.2) : Color.gray.opacity(0.2), in: Capsule())
                         Spacer()
@@ -262,7 +281,7 @@ struct FansPanel: View {
                     HStack {
                         Text("min \(Int(f.min))")
                         Spacer()
-                        Text("consigne \(Int(f.target)) · \(Int(f.percent)) %")
+                        Text(tr("consigne \(Int(f.target)) · \(Int(f.percent)) %", "target \(Int(f.target)) · \(Int(f.percent)) %"))
                         Spacer()
                         Text("max \(Int(f.max))")
                     }
@@ -292,11 +311,11 @@ struct ControlPanel: View {
     @State private var preset: CurvePreset = .balanced
 
     var body: some View {
-        Card(title: "Contrôle", icon: "slider.horizontal.3") {
+        Card(title: tr("Contrôle", "Control"), icon: "slider.horizontal.3") {
             Picker("", selection: $tab) {
                 Text("Auto (macOS)").tag("auto")
-                Text("Manuel").tag("manual")
-                Text("Courbe").tag("curve")
+                Text(tr("Manuel", "Manual")).tag("manual")
+                Text(tr("Courbe", "Curve")).tag("curve")
             }
             .pickerStyle(.segmented)
             .labelsHidden()
@@ -305,7 +324,7 @@ struct ControlPanel: View {
             case "manual":
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Vitesse")
+                        Text(tr("Vitesse", "Speed"))
                         Slider(value: $percent, in: 0...100, step: 5)
                         Text("\(Int(percent)) %").monospacedDigit().frame(width: 44, alignment: .trailing)
                     }
@@ -318,20 +337,20 @@ struct ControlPanel: View {
                     }
                 }
             case "curve":
-                Picker("Profil", selection: $preset) {
+                Picker(tr("Profil", "Profile"), selection: $preset) {
                     ForEach(CurvePreset.allCases) { Text($0.label).tag($0) }
                 }
                 CurveChart(preset: preset, current: snapshot.hotspot)
                     .frame(height: 120)
             default:
-                Text("macOS (thermalmonitord) pilote les ventilateurs. Sur Apple Silicon, il privilégie le silence et laisse la puce chauffer avant d'accélérer.")
+                Text(tr("macOS (thermalmonitord) pilote les ventilateurs. Sur Apple Silicon, il privilégie le silence et laisse la puce chauffer avant d'accélérer.", "macOS (thermalmonitord) drives the fans. On Apple Silicon it favors silence and lets the chip heat up before spinning up."))
                     .font(.callout).foregroundStyle(.secondary)
             }
 
             HStack {
-                Text("Actif : \(describe(snapshot.mode))").font(.caption).foregroundStyle(.secondary)
+                Text(tr("Actif : \(describe(snapshot.mode))", "Active: \(describe(snapshot.mode))")).font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Button("Appliquer") {
+                Button(tr("Appliquer", "Apply")) {
                     switch tab {
                     case "manual": client.setMode(.manual(percent))
                     case "curve": client.setMode(.curve(preset))
@@ -341,10 +360,10 @@ struct ControlPanel: View {
                 .buttonStyle(.borderedProminent)
                 .disabled(!snapshot.privileged && tab != "auto")
             }
-            Text("Quand vous quittez ThermoPilot, macOS reprend le contrôle des ventilateurs (après 5 s).")
+            Text(tr("Quand vous quittez ThermoPilot, macOS reprend le contrôle des ventilateurs (après 5 s).", "When you quit ThermoPilot, macOS takes back control of the fans (after 5 s)."))
                 .font(.caption2).foregroundStyle(.secondary)
             if !snapshot.privileged {
-                Label("Le contrôle nécessite le helper root (installé une seule fois, mot de passe admin).", systemImage: "info.circle")
+                Label(tr("Le contrôle nécessite le helper root (installé une seule fois, mot de passe admin).", "Control requires the root helper (installed once, admin password)."), systemImage: "info.circle")
                     .font(.caption).foregroundStyle(.orange)
             }
         }
@@ -362,8 +381,8 @@ struct ControlPanel: View {
 
     private func describe(_ m: ModeDTO) -> String {
         switch m.kind {
-        case "manual": "Manuel \(Int(m.percent ?? 0)) %"
-        case "curve": "Courbe \(CurvePreset(rawValue: m.preset ?? "")?.label ?? "")"
+        case "manual": tr("Manuel \(Int(m.percent ?? 0)) %", "Manual \(Int(m.percent ?? 0)) %")
+        case "curve": tr("Courbe \(CurvePreset(rawValue: m.preset ?? "")?.label ?? "")", "Curve \(CurvePreset(rawValue: m.preset ?? "")?.label ?? "")")
         default: "Auto (macOS)"
         }
     }
@@ -379,7 +398,7 @@ struct CurveChart: View {
                 LineMark(x: .value("°C", p.0), y: .value("%", p.1)).interpolationMethod(.linear)
                 AreaMark(x: .value("°C", p.0), y: .value("%", p.1)).foregroundStyle(.tint.opacity(0.15))
             }
-            RuleMark(x: .value("Actuel", min(current, 105)))
+            RuleMark(x: .value(tr("Actuel", "Current"), min(current, 105)))
                 .foregroundStyle(Thermal.color(current))
                 .annotation(position: .top, alignment: .leading) {
                     Text("\(Int(current))°").font(.caption2.bold()).foregroundStyle(Thermal.color(current))
@@ -387,8 +406,8 @@ struct CurveChart: View {
         }
         .chartXScale(domain: 30...105)
         .chartYScale(domain: 0...100)
-        .chartXAxisLabel("Température (°C)")
-        .chartYAxisLabel("Ventilation (%)")
+        .chartXAxisLabel(tr("Température (°C)", "Temperature (°C)"))
+        .chartYAxisLabel(tr("Ventilation (%)", "Fan speed (%)"))
     }
 }
 
@@ -410,8 +429,8 @@ struct HistoryCharts: View {
     var body: some View {
         let pts = points
         let maxRPM: Double = (fans.map(\.max).max() ?? 6000) + 200
-        Card(title: "Historique", icon: "chart.xyaxis.line") {
-            Picker("Fenêtre", selection: $window) {
+        Card(title: tr("Historique", "History"), icon: "chart.xyaxis.line") {
+            Picker(tr("Fenêtre", "Window"), selection: $window) {
                 Text("1 min").tag(60.0)
                 Text("5 min").tag(300.0)
                 Text("10 min").tag(600.0)
@@ -431,15 +450,15 @@ private struct TemperatureChart: View {
     var body: some View {
         Chart {
             ForEach(points) { (p: HistoryPoint) in
-                LineMark(x: .value("t", p.date), y: .value("°C", p.hotspot), series: .value("s", "Point chaud"))
-                    .foregroundStyle(by: .value("s", "Point chaud"))
+                LineMark(x: .value("t", p.date), y: .value("°C", p.hotspot), series: .value("s", tr("Point chaud", "Hotspot")))
+                    .foregroundStyle(by: .value("s", tr("Point chaud", "Hotspot")))
                 LineMark(x: .value("t", p.date), y: .value("°C", p.cpu), series: .value("s", "CPU P max"))
                     .foregroundStyle(by: .value("s", "CPU P max"))
                 LineMark(x: .value("t", p.date), y: .value("°C", p.gpu), series: .value("s", "GPU max"))
                     .foregroundStyle(by: .value("s", "GPU max"))
             }
         }
-        .chartForegroundStyleScale(["Point chaud": Color.red, "CPU P max": Color.orange, "GPU max": Color.purple])
+        .chartForegroundStyleScale([tr("Point chaud", "Hotspot"): Color.red, "CPU P max": Color.orange, "GPU max": Color.purple])
         .chartYScale(domain: 20.0...110.0)
         .chartYAxisLabel("°C")
         .frame(height: 180)
@@ -453,8 +472,8 @@ private struct FanChart: View {
         Chart {
             ForEach(points) { (p: HistoryPoint) in
                 ForEach(Array(p.fans.enumerated()), id: \.offset) { (i: Int, rpm: Double) in
-                    LineMark(x: .value("t", p.date), y: .value("RPM", rpm), series: .value("f", "Ventilateur \(i + 1)"))
-                        .foregroundStyle(by: .value("f", "Ventilateur \(i + 1)"))
+                    LineMark(x: .value("t", p.date), y: .value("RPM", rpm), series: .value("f", tr("Ventilateur \(i + 1)", "Fan \(i + 1)")))
+                        .foregroundStyle(by: .value("f", tr("Ventilateur \(i + 1)", "Fan \(i + 1)")))
                 }
             }
         }
@@ -472,7 +491,7 @@ struct OtherSensors: View {
     private let icons = ["ssd": "internaldrive", "battery": "battery.75percent", "wifi": "wifi", "palm": "hand.raised", "air": "wind"]
 
     var body: some View {
-        Card(title: "Autres capteurs", icon: "thermometer.variable.and.figure") {
+        Card(title: tr("Autres capteurs", "Other sensors"), icon: "thermometer.variable.and.figure") {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 5), spacing: 10) {
                 ForEach(ids.compactMap { snapshot.group($0) }) { g in
                     let c = Thermal.color(g.max, warn: g.warn, crit: g.crit)
@@ -488,7 +507,7 @@ struct OtherSensors: View {
             }
             if !snapshot.cpuCores.isEmpty {
                 Divider()
-                Text("Charge par cœur CPU").font(.caption).foregroundStyle(.secondary)
+                Text(tr("Charge par cœur CPU", "Load per CPU core")).font(.caption).foregroundStyle(.secondary)
                 HStack(alignment: .bottom, spacing: 3) {
                     ForEach(Array(snapshot.cpuCores.enumerated()), id: \.offset) { _, v in
                         RoundedRectangle(cornerRadius: 2)
@@ -507,8 +526,8 @@ struct RawSensors: View {
     let sensors: [Sensor]
     @State private var expanded = false
     var body: some View {
-        Card(title: "Capteurs bruts (\(sensors.count))", icon: "list.bullet.rectangle") {
-            DisclosureGroup(expanded ? "Masquer" : "Afficher toutes les clés SMC", isExpanded: $expanded) {
+        Card(title: tr("Capteurs bruts (\(sensors.count))", "Raw sensors (\(sensors.count))"), icon: "list.bullet.rectangle") {
+            DisclosureGroup(expanded ? tr("Masquer", "Hide") : tr("Afficher toutes les clés SMC", "Show all SMC keys"), isExpanded: $expanded) {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), alignment: .leading, spacing: 4) {
                     ForEach(sensors) { s in
                         HStack(spacing: 4) {
