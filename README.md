@@ -109,3 +109,7 @@ engine/target/release/fanengine usage      # rapport d'utilisation et diagnostic
 engine/target/release/fanengine bench      # coût (temps mur / CPU) de chaque lecture du moteur
 sudo engine/target/release/fanengine auto  # secours : rendre les ventilateurs à macOS
 ```
+
+## Licence
+
+MIT — voir [LICENSE](LICENSE).
